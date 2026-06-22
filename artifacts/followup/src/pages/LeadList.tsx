@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLeads } from "../hooks/useLeads";
-import { isDateToday, isDateOverdue } from "../lib/leadUtils";
 import { StatusBadge } from "../components/StatusBadge";
+import { useDevDate } from "@/contexts/DevDateContext";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function LeadList() {
   const { leads, isLoaded } = useLeads();
+  const { getToday } = useDevDate();
   const [filter, setFilter] = useState("all");
 
   if (!isLoaded) return null;
 
+  const today = getToday();
   const filteredLeads = leads.filter(lead => {
     if (filter === "all") return true;
-    if (filter === "today") return isDateToday(lead.followUpDate) && lead.status !== "Won" && lead.status !== "Lost";
-    if (filter === "overdue") return isDateOverdue(lead.followUpDate) && lead.status !== "Won" && lead.status !== "Lost";
+    if (filter === "today") return lead.followUpDate === today && lead.status !== "Won" && lead.status !== "Lost";
+    if (filter === "overdue") return lead.followUpDate < today && lead.status !== "Won" && lead.status !== "Lost";
     if (filter === "won") return lead.status === "Won";
     if (filter === "lost") return lead.status === "Lost";
     return true;

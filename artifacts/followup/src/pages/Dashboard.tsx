@@ -1,27 +1,38 @@
 import { useLeads } from "../hooks/useLeads";
-import { isDateToday, isDateOverdue, getTodayDateString } from "../lib/leadUtils";
 import { StatusBadge } from "../components/StatusBadge";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
+import { useDevDate } from "@/contexts/DevDateContext";
 
 export default function Dashboard() {
   const { leads, isLoaded } = useLeads();
+  const { getToday, devModeEnabled, testDate } = useDevDate();
 
   if (!isLoaded) return null;
 
+  const today = getToday();
   const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
   const wonLeads = leads.filter(l => l.status === "Won");
   
-  const todayLeads = activeLeads.filter(l => isDateToday(l.followUpDate));
-  const overdueLeads = activeLeads.filter(l => isDateOverdue(l.followUpDate));
+  const todayLeads = activeLeads.filter(l => l.followUpDate === today);
+  const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
   const actionRequiredLeads = [...overdueLeads, ...todayLeads].sort((a, b) => 
     a.followUpDate.localeCompare(b.followUpDate)
   );
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        {devModeEnabled && (
+          <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <span className="font-semibold">Time Travel active</span>
+            <span className="text-amber-600">—</span>
+            <span>Showing as of <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span></span>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -90,7 +101,7 @@ export default function Dashboard() {
                       <td className="p-4 align-middle relative z-20">{lead.service}</td>
                       <td className="p-4 align-middle relative z-20">{lead.phone}</td>
                       <td className="p-4 align-middle relative z-20 font-medium">
-                        {isDateOverdue(lead.followUpDate) ? (
+                        {lead.followUpDate < today ? (
                           <span className="text-destructive font-semibold">Overdue ({format(parseISO(lead.followUpDate), 'MMM d')})</span>
                         ) : (
                           <span className="text-foreground">Today</span>
