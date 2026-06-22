@@ -1,5 +1,6 @@
 import { useLeads } from "../hooks/useLeads";
 import { StatusBadge } from "../components/StatusBadge";
+import { LeadTaskCard } from "../components/LeadTaskCard";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
@@ -14,10 +15,10 @@ export default function Dashboard() {
   const today = getToday();
   const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
   const wonLeads = leads.filter(l => l.status === "Won");
-  
+
   const todayLeads = activeLeads.filter(l => l.followUpDate === today);
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
-  const actionRequiredLeads = [...overdueLeads, ...todayLeads].sort((a, b) => 
+  const actionRequiredLeads = [...overdueLeads, ...todayLeads].sort((a, b) =>
     a.followUpDate.localeCompare(b.followUpDate)
   );
 
@@ -34,87 +35,70 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Due Today</CardTitle>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Due Today</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             <div className="text-3xl font-bold">{todayLeads.length}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">Overdue</CardTitle>
+        <Card className={overdueLeads.length > 0 ? "border-destructive/40" : ""}>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-destructive uppercase tracking-wide">Overdue</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             <div className="text-3xl font-bold text-destructive">{overdueLeads.length}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Open</CardTitle>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Open</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             <div className="text-3xl font-bold">{activeLeads.length}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-600">Won Leads</CardTitle>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Won</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             <div className="text-3xl font-bold text-emerald-600">{wonLeads.length}</div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Today's task list */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Needs Attention</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-tight">
+            {overdueLeads.length > 0 ? "Overdue + Today's Follow Ups" : "Today's Follow Ups"}
+            {actionRequiredLeads.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
+                {actionRequiredLeads.length}
+              </span>
+            )}
+          </h2>
+          <Link href="/leads?filter=all">
+            <span className="text-sm text-primary hover:underline cursor-pointer">All leads</span>
+          </Link>
+        </div>
+
         {actionRequiredLeads.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-lg font-medium text-muted-foreground">You are all caught up!</p>
-              <p className="text-sm text-muted-foreground">No leads need follow-up today.</p>
+              <p className="text-lg font-medium text-muted-foreground">All caught up.</p>
+              <p className="text-sm text-muted-foreground mt-1">No leads need follow-up today.</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden">
-            <div className="w-full overflow-auto">
-              <table className="w-full caption-bottom text-sm">
-                <thead className="[&_tr]:border-b bg-muted/40">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Service</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Phone</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Due</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  {actionRequiredLeads.map((lead) => (
-                    <tr key={lead.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted group cursor-pointer relative">
-                      <td className="p-4 align-middle font-medium">
-                        <Link href={`/leads/${lead.id}`} className="absolute inset-0 z-10" />
-                        <span className="relative z-20 group-hover:underline">{lead.name}</span>
-                      </td>
-                      <td className="p-4 align-middle relative z-20">{lead.service}</td>
-                      <td className="p-4 align-middle relative z-20">{lead.phone}</td>
-                      <td className="p-4 align-middle relative z-20 font-medium">
-                        {lead.followUpDate < today ? (
-                          <span className="text-destructive font-semibold">Overdue ({format(parseISO(lead.followUpDate), 'MMM d')})</span>
-                        ) : (
-                          <span className="text-foreground">Today</span>
-                        )}
-                      </td>
-                      <td className="p-4 align-middle relative z-20">
-                        <StatusBadge status={lead.status as any} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="space-y-3">
+            {actionRequiredLeads.map((lead) => (
+              <LeadTaskCard key={lead.id} lead={lead} />
+            ))}
           </div>
         )}
       </div>

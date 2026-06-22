@@ -12,6 +12,12 @@ export function isDateToday(dateStr: string): boolean {
   return dateStr === getTodayDateString();
 }
 
+export function addDaysToDate(fromDate: string, days: number): string {
+  const d = new Date(fromDate + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function getSeedLeads(): Lead[] {
   const today = getTodayDateString();
   const yesterdayDate = new Date();

@@ -1,12 +1,51 @@
 import { useState } from "react";
-import { useLeads } from "../hooks/useLeads";
+import { useLeads, Lead, LeadStatus } from "../hooks/useLeads";
 import { StatusBadge } from "../components/StatusBadge";
+import { LeadTaskCard } from "../components/LeadTaskCard";
 import { useDevDate } from "@/contexts/DevDateContext";
+import { addDaysToDate } from "../lib/leadUtils";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const STATUS_ACTIONS: { label: string; status: LeadStatus; className: string }[] = [
+  { label: "Contacted", status: "Contacted", className: "border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100" },
+  { label: "Quote Sent", status: "Quote Sent", className: "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100" },
+  { label: "Won", status: "Won", className: "border-green-200 bg-green-50 text-green-800 hover:bg-green-100" },
+  { label: "Lost", status: "Lost", className: "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100" },
+];
+
+function InlineActions({ lead }: { lead: Lead }) {
+  const { updateLead } = useLeads();
+  const { getToday } = useDevDate();
+  const today = getToday();
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {STATUS_ACTIONS.filter(a => a.status !== lead.status).map((action) => (
+        <button
+          key={action.status}
+          onClick={(e) => { e.stopPropagation(); updateLead(lead.id, { status: action.status }); }}
+          className={`rounded border px-2 py-0.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${action.className}`}
+        >
+          {action.label}
+        </button>
+      ))}
+      <span className="text-muted-foreground text-xs self-center mx-0.5">|</span>
+      {[{ label: "+1", days: 1 }, { label: "+3", days: 3 }, { label: "+7", days: 7 }].map(({ label, days }) => (
+        <button
+          key={days}
+          onClick={(e) => { e.stopPropagation(); updateLead(lead.id, { followUpDate: addDaysToDate(today, days) }); }}
+          className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          {label}d
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function LeadList() {
   const { leads, isLoaded } = useLeads();
@@ -23,14 +62,22 @@ export default function LeadList() {
     if (filter === "won") return lead.status === "Won";
     if (filter === "lost") return lead.status === "Lost";
     return true;
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }).sort((a, b) => {
+    if (filter === "overdue" || filter === "today") {
+      return a.followUpDate.localeCompare(b.followUpDate);
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const actionFilters = ["today", "overdue"];
+  const showQuickActions = actionFilters.includes(filter) || filter === "all";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
         <Link href="/leads/new">
-          <Button className="bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer">
+          <Button className="bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer h-11 px-5">
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Lead
           </Button>
@@ -38,7 +85,7 @@ export default function LeadList() {
       </div>
 
       <Tabs value={filter} onValueChange={setFilter} className="w-full">
-        <TabsList className="flex flex-wrap h-auto bg-muted/50 p-1">
+        <TabsList className="flex flex-wrap h-auto bg-muted/50 p-1 gap-0.5">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="today">Due Today</TabsTrigger>
           <TabsTrigger value="overdue">Overdue</TabsTrigger>
@@ -47,47 +94,74 @@ export default function LeadList() {
         </TabsList>
       </Tabs>
 
-      <div className="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden">
-        <div className="w-full overflow-auto">
-          <table className="w-full caption-bottom text-sm">
-            <thead className="[&_tr]:border-b bg-muted/40">
-              <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Service</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Phone</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Due</th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody className="[&_tr:last-child]:border-0">
-              {filteredLeads.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="h-32 text-center text-muted-foreground bg-muted/10">
-                    No leads found for this filter.
-                  </td>
-                </tr>
-              ) : (
-                filteredLeads.map((lead) => (
-                  <tr key={lead.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted group cursor-pointer relative">
-                    <td className="p-4 align-middle font-medium">
-                      <Link href={`/leads/${lead.id}`} className="absolute inset-0 z-10" />
-                      <span className="relative z-20 group-hover:underline">{lead.name}</span>
-                    </td>
-                    <td className="p-4 align-middle relative z-20">{lead.service}</td>
-                    <td className="p-4 align-middle relative z-20">{lead.phone}</td>
-                    <td className="p-4 align-middle relative z-20 text-muted-foreground">
-                      {format(parseISO(lead.followUpDate), 'MMM d, yyyy')}
-                    </td>
-                    <td className="p-4 align-middle relative z-20">
-                      <StatusBadge status={lead.status as any} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {filteredLeads.length === 0 ? (
+        <div className="rounded-lg border border-dashed flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+          <p className="font-medium">No leads in this view.</p>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Mobile: card list */}
+          <div className="md:hidden space-y-3">
+            {filteredLeads.map((lead) => (
+              <LeadTaskCard key={lead.id} lead={lead} />
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block rounded-md border bg-card shadow-sm overflow-hidden">
+            <div className="w-full overflow-auto">
+              <table className="w-full caption-bottom text-sm">
+                <thead className="bg-muted/40 border-b">
+                  <tr>
+                    <th className="h-11 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
+                    <th className="h-11 px-4 text-left align-middle font-medium text-muted-foreground">Service</th>
+                    <th className="h-11 px-4 text-left align-middle font-medium text-muted-foreground">Phone</th>
+                    <th className="h-11 px-4 text-left align-middle font-medium text-muted-foreground">Due</th>
+                    <th className="h-11 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                    <th className="h-11 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeads.map((lead) => (
+                    <tr key={lead.id} className="border-b last:border-0 transition-colors hover:bg-muted/30 group">
+                      <td className="p-3 align-middle font-medium">
+                        <Link href={`/leads/${lead.id}`}>
+                          <span className="hover:underline cursor-pointer">{lead.name}</span>
+                        </Link>
+                      </td>
+                      <td className="p-3 align-middle text-muted-foreground">{lead.service}</td>
+                      <td className="p-3 align-middle">
+                        <a href={`tel:${lead.phone}`} className="hover:underline text-primary font-medium">
+                          {lead.phone}
+                        </a>
+                      </td>
+                      <td className="p-3 align-middle whitespace-nowrap">
+                        {lead.followUpDate < today ? (
+                          <span className="text-destructive font-semibold text-xs">
+                            Overdue — {format(parseISO(lead.followUpDate), "MMM d")}
+                          </span>
+                        ) : lead.followUpDate === today ? (
+                          <span className="font-semibold text-xs">Today</span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">
+                            {format(parseISO(lead.followUpDate), "MMM d, yyyy")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 align-middle">
+                        <StatusBadge status={lead.status} />
+                      </td>
+                      <td className="p-3 align-middle">
+                        <InlineActions lead={lead} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
