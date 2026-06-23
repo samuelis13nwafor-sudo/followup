@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2, RotateCcw } from "lucide-react";
+import { LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2, RotateCcw, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { useDevDate } from "@/contexts/DevDateContext";
 import { useLeads } from "@/hooks/useLeads";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 import { getSeedLeads } from "@/lib/leadUtils";
 import { generateFakeLeads } from "@/lib/generateFakeLeads";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 function DevPanel() {
   const { devModeEnabled, testDate, setDevModeEnabled, setTestDate, getToday } = useDevDate();
   const { replaceAllLeads } = useLeads();
+  const { resetOnboarding } = useOnboarding();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -102,6 +104,22 @@ function DevPanel() {
               >
                 <Trash2 className="h-3.5 w-3.5 shrink-0" />
                 Clear All Leads
+              </button>
+            </div>
+
+            {/* Onboarding */}
+            <div className="space-y-1.5 border-t border-amber-200 pt-3">
+              <p className="text-xs text-amber-700 font-medium">Onboarding</p>
+              <button
+                type="button"
+                onClick={() => {
+                  resetOnboarding();
+                  toast({ title: "Onboarding reset", description: "Landing page will show on next visit to /." });
+                }}
+                className="w-full flex items-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:bg-amber-200 transition-colors cursor-pointer touch-manipulation"
+              >
+                <UserX className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                Reset Onboarding
               </button>
             </div>
           </>

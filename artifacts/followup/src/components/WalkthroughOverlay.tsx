@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, ChevronRight, X, CheckCircle2 } from "lucide-react";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 
 interface Step {
   target: string | null;
@@ -54,6 +55,7 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
   const [step, setStep] = useState(0);
   const [highlight, setHighlight] = useState<Rect | null>(null);
   const [, navigate] = useLocation();
+  const { markDemoSeen } = useOnboarding();
 
   const isFinal = step === STEPS.length - 1;
   const current = STEPS[step];
@@ -89,11 +91,13 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
   }, [measure]);
 
   function handleFinish() {
+    markDemoSeen();
     onFinish();
     navigate("/dashboard");
   }
 
   function handleSkip() {
+    markDemoSeen();
     onFinish();
     navigate("/dashboard");
   }

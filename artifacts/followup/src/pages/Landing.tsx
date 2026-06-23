@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useLeads } from "@/hooks/useLeads";
 import { useView } from "@/contexts/ViewContext";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 import { getSeedLeads } from "@/lib/leadUtils";
 import { ArrowRight, Bell, Clock, NotebookPen } from "lucide-react";
 
@@ -26,11 +28,27 @@ export default function Landing() {
   const [, navigate] = useLocation();
   const { replaceAllLeads } = useLeads();
   const { setDensity } = useView();
+  const { hasSeenDemo, markDemoSeen } = useOnboarding();
+
+  // Returning users skip straight to the dashboard
+  useEffect(() => {
+    if (hasSeenDemo) {
+      navigate("/dashboard");
+    }
+  }, [hasSeenDemo, navigate]);
+
+  if (hasSeenDemo) return null;
 
   function handleStartDemo() {
+    markDemoSeen();
     replaceAllLeads(getSeedLeads());
     setDensity("comfortable");
     navigate("/dashboard?demo=true");
+  }
+
+  function handleGoToDashboard() {
+    markDemoSeen();
+    navigate("/dashboard");
   }
 
   return (
@@ -40,7 +58,7 @@ export default function Landing() {
         <span className="font-bold text-lg text-foreground tracking-tight">FollowUp</span>
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={handleGoToDashboard}
           className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           Go to Dashboard
@@ -73,7 +91,7 @@ export default function Landing() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/dashboard")}
+              onClick={handleGoToDashboard}
               className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-foreground font-semibold px-6 py-3 text-sm transition-colors cursor-pointer touch-manipulation"
             >
               Go to Dashboard

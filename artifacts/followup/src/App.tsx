@@ -13,6 +13,7 @@ import LeadDetail from "@/pages/LeadDetail";
 import { DevDateProvider } from "@/contexts/DevDateContext";
 import { LeadsProvider } from "@/contexts/LeadsContext";
 import { ViewProvider } from "@/contexts/ViewContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 const queryClient = new QueryClient();
 
@@ -36,7 +37,7 @@ function Router() {
         </Layout>
       </Route>
       <Route path="/leads/:id">
-        {(params) => <Layout><LeadDetail /></Layout>}
+        {() => <Layout><LeadDetail /></Layout>}
       </Route>
       <Route component={NotFound} />
     </Switch>
@@ -47,16 +48,18 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <LeadsProvider>
-          <DevDateProvider>
-            <ViewProvider>
-              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <Router />
-              </WouterRouter>
-              <Toaster />
-            </ViewProvider>
-          </DevDateProvider>
-        </LeadsProvider>
+        <OnboardingProvider>
+          <LeadsProvider>
+            <DevDateProvider>
+              <ViewProvider>
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </ViewProvider>
+            </DevDateProvider>
+          </LeadsProvider>
+        </OnboardingProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
