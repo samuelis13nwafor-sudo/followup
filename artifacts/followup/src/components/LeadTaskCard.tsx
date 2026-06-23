@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { Lead, LeadStatus } from "../hooks/useLeads";
 import { useLeads } from "../hooks/useLeads";
 import { useDevDate } from "@/contexts/DevDateContext";
 import { addDaysToDate } from "../lib/leadUtils";
 import { StatusBadge } from "./StatusBadge";
+import { NotesModal } from "./NotesModal";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
-import { Phone, MoreHorizontal } from "lucide-react";
+import { Phone, MoreHorizontal, NotebookPen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -39,6 +41,7 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
   const { getToday } = useDevDate();
   const { toast } = useToast();
   const today = getToday();
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const isOverdue = lead.followUpDate < today;
   const availableActions = STATUS_ACTIONS.filter(a => a.status !== lead.status);
@@ -95,6 +98,9 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setNotesOpen(true)} className="cursor-pointer text-sm">
+          Notes
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={`/leads/${lead.id}`}>
             <span className="cursor-pointer text-sm w-full">View details</span>
@@ -204,6 +210,8 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
           {/* Actions menu */}
           {actionsDropdown("end")}
         </div>
+
+        <NotesModal lead={lead} open={notesOpen} onClose={() => setNotesOpen(false)} />
       </div>
     );
   }
@@ -265,8 +273,21 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
               </button>
             ))}
           </div>
+
+          <div className="flex items-center pt-0.5">
+            <button
+              type="button"
+              onClick={() => setNotesOpen(true)}
+              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation ${lead.notes ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+            >
+              <NotebookPen className="h-3.5 w-3.5" />
+              {lead.notes ? "Notes" : "Add note"}
+            </button>
+          </div>
         </div>
       </div>
+
+      <NotesModal lead={lead} open={notesOpen} onClose={() => setNotesOpen(false)} />
     </div>
   );
 }
