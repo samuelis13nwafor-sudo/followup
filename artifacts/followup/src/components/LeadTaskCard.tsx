@@ -172,6 +172,28 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
                 </button>
               ))}
             </div>
+
+            {/* Notes preview / button */}
+            <button
+              type="button"
+              onClick={() => setNotesOpen(true)}
+              className={`w-full text-left rounded-md border px-3 py-2 text-xs transition-colors cursor-pointer touch-manipulation ${
+                lead.notes
+                  ? "border-amber-200 bg-amber-50 hover:bg-amber-100"
+                  : "border-dashed border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <NotebookPen className={`h-3.5 w-3.5 shrink-0 ${lead.notes ? "text-amber-600" : "text-muted-foreground"}`} />
+                {lead.notes ? (
+                  <span className="text-amber-900 line-clamp-1">
+                    <span className="font-medium">Note:</span> {lead.notes}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground italic">Add note…</span>
+                )}
+              </div>
+            </button>
           </div>
         </div>
 
