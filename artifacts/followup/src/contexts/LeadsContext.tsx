@@ -25,6 +25,7 @@ interface LeadsContextValue {
   updateLead: (id: string, updates: Partial<Omit<Lead, "id" | "createdAt" | "updatedAt">>) => void;
   deleteLead: (id: string) => void;
   getLead: (id: string) => Lead | undefined;
+  replaceAllLeads: (newLeads: Lead[]) => void;
 }
 
 const LeadsContext = createContext<LeadsContextValue | null>(null);
@@ -100,8 +101,13 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
     [leads]
   );
 
+  const replaceAllLeads = useCallback((newLeads: Lead[]) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
+    setLeads(newLeads);
+  }, []);
+
   return (
-    <LeadsContext.Provider value={{ leads, isLoaded, addLead, updateLead, deleteLead, getLead }}>
+    <LeadsContext.Provider value={{ leads, isLoaded, addLead, updateLead, deleteLead, getLead, replaceAllLeads }}>
       {children}
     </LeadsContext.Provider>
   );
