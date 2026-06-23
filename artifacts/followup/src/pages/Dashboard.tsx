@@ -1,26 +1,169 @@
-import { useLeads } from "../hooks/useLeads";
-import { StatusBadge } from "../components/StatusBadge";
+import { useState } from "react";
+import { useLeads, Lead } from "../hooks/useLeads";
 import { LeadTaskCard } from "../components/LeadTaskCard";
+import { StatusBadge } from "../components/StatusBadge";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { useDevDate } from "@/contexts/DevDateContext";
+import { X } from "lucide-react";
+
+type DashFilter = "today" | "overdue" | "open" | "won" | null;
+
+interface StatCardProps {
+  label: string;
+  value: number;
+  filterKey: DashFilter;
+  activeFilter: DashFilter;
+  onClick: (key: DashFilter) => void;
+  labelColor?: string;
+  valueColor?: string;
+  activeClass?: string;
+  borderClass?: string;
+}
+
+function StatCard({
+  label, value, filterKey, activeFilter, onClick,
+  labelColor = "text-muted-foreground",
+  valueColor = "text-foreground",
+  activeClass = "ring-2 ring-primary bg-primary/5",
+  borderClass = "",
+}: StatCardProps) {
+  const isActive = activeFilter === filterKey;
+  return (
+    <button
+      onClick={() => onClick(isActive ? null : filterKey)}
+      className={[
+        "rounded-lg border bg-card text-left shadow-sm w-full transition-all duration-150",
+        "hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5",
+        "active:translate-y-0 active:shadow-sm active:scale-[0.98]",
+        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        borderClass,
+        isActive ? activeClass : "",
+      ].join(" ")}
+      aria-pressed={isActive}
+    >
+      <div className="pb-1 pt-4 px-4">
+        <p className={`text-xs font-semibold uppercase tracking-wide ${labelColor}`}>{label}</p>
+      </div>
+      <div className="px-4 pb-4">
+        <p className={`text-3xl font-bold ${valueColor}`}>{value}</p>
+      </div>
+    </button>
+  );
+}
+
+interface FilteredSectionProps {
+  filter: DashFilter;
+  leads: Lead[];
+  todayLeads: Lead[];
+  overdueLeads: Lead[];
+  activeLeads: Lead[];
+  wonLeads: Lead[];
+  onClear: () => void;
+}
+
+function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads, wonLeads, onClear }: FilteredSectionProps) {
+  let displayLeads: Lead[];
+  let title: string;
+  let badgeCount: number | null = null;
+
+  switch (filter) {
+    case "today":
+      displayLeads = todayLeads;
+      title = "Due Today";
+      break;
+    case "overdue":
+      displayLeads = overdueLeads;
+      title = "Overdue";
+      break;
+    case "open":
+      displayLeads = activeLeads.slice().sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+      title = "All Open Leads";
+      break;
+    case "won":
+      displayLeads = wonLeads;
+      title = "Won Leads";
+      break;
+    default: {
+      const actionRequired = [...overdueLeads, ...todayLeads].sort((a, b) =>
+        a.followUpDate.localeCompare(b.followUpDate)
+      );
+      displayLeads = actionRequired;
+      title = overdueLeads.length > 0 ? "Overdue + Today's Follow Ups" : "Today's Follow Ups";
+      badgeCount = actionRequired.length > 0 ? actionRequired.length : null;
+      break;
+    }
+  }
+
+  const emptyMessages: Record<string, string> = {
+    today: "No leads due today.",
+    overdue: "No overdue leads. Nice work.",
+    open: "No open leads.",
+    won: "No won leads yet.",
+    default: "All caught up. No leads need follow-up today.",
+  };
+  const emptyMsg = emptyMessages[filter ?? "default"] ?? emptyMessages.default;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+          {title}
+          {badgeCount !== null && (
+            <span className="inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
+              {badgeCount}
+            </span>
+          )}
+          {filter !== null && (
+            <span className="text-sm font-normal text-muted-foreground">({displayLeads.length})</span>
+          )}
+        </h2>
+        <div className="flex items-center gap-3">
+          {filter !== null && (
+            <button
+              onClick={onClear}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <X className="h-3.5 w-3.5" />
+              Show all
+            </button>
+          )}
+          <Link href="/leads">
+            <span className="text-sm text-primary hover:underline cursor-pointer">All leads</span>
+          </Link>
+        </div>
+      </div>
+
+      {displayLeads.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-base font-medium text-muted-foreground">{emptyMsg}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {displayLeads.map((lead) => (
+            <LeadTaskCard key={lead.id} lead={lead} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { leads, isLoaded } = useLeads();
   const { getToday, devModeEnabled, testDate } = useDevDate();
+  const [activeFilter, setActiveFilter] = useState<DashFilter>(null);
 
   if (!isLoaded) return null;
 
   const today = getToday();
   const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
   const wonLeads = leads.filter(l => l.status === "Won");
-
   const todayLeads = activeLeads.filter(l => l.followUpDate === today);
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
-  const actionRequiredLeads = [...overdueLeads, ...todayLeads].sort((a, b) =>
-    a.followUpDate.localeCompare(b.followUpDate)
-  );
 
   return (
     <div className="space-y-8">
@@ -35,73 +178,55 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-1 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Due Today</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-3xl font-bold">{todayLeads.length}</div>
-          </CardContent>
-        </Card>
-        <Card className={overdueLeads.length > 0 ? "border-destructive/40" : ""}>
-          <CardHeader className="pb-1 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-destructive uppercase tracking-wide">Overdue</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-3xl font-bold text-destructive">{overdueLeads.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Open</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-3xl font-bold">{activeLeads.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1 pt-4 px-4">
-            <CardTitle className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Won</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-3xl font-bold text-emerald-600">{wonLeads.length}</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="Due Today"
+          value={todayLeads.length}
+          filterKey="today"
+          activeFilter={activeFilter}
+          onClick={setActiveFilter}
+          activeClass="ring-2 ring-primary bg-primary/5"
+        />
+        <StatCard
+          label="Overdue"
+          value={overdueLeads.length}
+          filterKey="overdue"
+          activeFilter={activeFilter}
+          onClick={setActiveFilter}
+          labelColor="text-destructive"
+          valueColor="text-destructive"
+          borderClass={overdueLeads.length > 0 ? "border-destructive/30" : ""}
+          activeClass="ring-2 ring-destructive bg-destructive/5"
+        />
+        <StatCard
+          label="Total Open"
+          value={activeLeads.length}
+          filterKey="open"
+          activeFilter={activeFilter}
+          onClick={setActiveFilter}
+          activeClass="ring-2 ring-primary bg-primary/5"
+        />
+        <StatCard
+          label="Won"
+          value={wonLeads.length}
+          filterKey="won"
+          activeFilter={activeFilter}
+          onClick={setActiveFilter}
+          labelColor="text-emerald-600"
+          valueColor="text-emerald-600"
+          activeClass="ring-2 ring-emerald-600 bg-emerald-50"
+        />
       </div>
 
-      {/* Today's task list */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">
-            {overdueLeads.length > 0 ? "Overdue + Today's Follow Ups" : "Today's Follow Ups"}
-            {actionRequiredLeads.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
-                {actionRequiredLeads.length}
-              </span>
-            )}
-          </h2>
-          <Link href="/leads?filter=all">
-            <span className="text-sm text-primary hover:underline cursor-pointer">All leads</span>
-          </Link>
-        </div>
-
-        {actionRequiredLeads.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-lg font-medium text-muted-foreground">All caught up.</p>
-              <p className="text-sm text-muted-foreground mt-1">No leads need follow-up today.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {actionRequiredLeads.map((lead) => (
-              <LeadTaskCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        )}
-      </div>
+      <FilteredSection
+        filter={activeFilter}
+        leads={leads}
+        todayLeads={todayLeads}
+        overdueLeads={overdueLeads}
+        activeLeads={activeLeads}
+        wonLeads={wonLeads}
+        onClear={() => setActiveFilter(null)}
+      />
     </div>
   );
 }
