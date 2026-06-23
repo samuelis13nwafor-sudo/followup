@@ -61,10 +61,91 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
     ? `Overdue — ${format(parseISO(lead.followUpDate), "MMM d")}`
     : "Due Today";
 
+  const actionsDropdown = (align: "end" | "start" = "end") => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer touch-manipulation"
+          aria-label="Actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-44">
+        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Mark as</DropdownMenuLabel>
+        {availableActions.map((action) => (
+          <DropdownMenuItem
+            key={action.status}
+            onSelect={() => handleStatus(action.status)}
+            className="cursor-pointer text-sm"
+          >
+            {action.label}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Snooze</DropdownMenuLabel>
+        {SNOOZE_OPTIONS.map(({ label, days }) => (
+          <DropdownMenuItem
+            key={days}
+            onSelect={() => handleSnooze(days)}
+            className="cursor-pointer text-sm"
+          >
+            {label}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href={`/leads/${lead.id}`}>
+            <span className="cursor-pointer text-sm w-full">View details</span>
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   if (compact) {
     return (
       <div className="rounded-lg border bg-card shadow-sm">
-        <div className="flex items-center gap-2 px-3 py-2 flex-wrap sm:flex-nowrap">
+        {/* ── Mobile compact layout (<640px) ── */}
+        <div className="sm:hidden px-3 py-2 space-y-1.5">
+          {/* Row 1: name + status */}
+          <div className="flex items-center justify-between gap-2">
+            <Link href={`/leads/${lead.id}`}>
+              <span className="font-semibold text-sm leading-tight hover:underline cursor-pointer truncate max-w-[200px] block">
+                {lead.name}
+              </span>
+            </Link>
+            <div className="shrink-0">
+              <StatusBadge status={lead.status} />
+            </div>
+          </div>
+
+          {/* Row 2: service */}
+          <p className="text-xs text-muted-foreground truncate">{lead.service}</p>
+
+          {/* Row 3: phone + date */}
+          <div className="flex items-center justify-between gap-2">
+            <a
+              href={`tel:${lead.phone}`}
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <Phone className="h-3 w-3 shrink-0" />
+              {lead.phone}
+            </a>
+            <span className={`text-xs font-semibold shrink-0 ${isOverdue ? "text-destructive" : "text-foreground"}`}>
+              {dateLabel}
+            </span>
+          </div>
+
+          {/* Row 4: actions menu */}
+          <div className="flex justify-end">
+            {actionsDropdown("end")}
+          </div>
+        </div>
+
+        {/* ── Desktop/tablet compact layout (≥640px) — unchanged ── */}
+        <div className="hidden sm:flex items-center gap-2 px-3 py-2">
           {/* Name + service */}
           <div className="min-w-0 flex items-center gap-1.5 flex-1">
             <Link href={`/leads/${lead.id}`}>
@@ -72,8 +153,8 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
                 {lead.name}
               </span>
             </Link>
-            <span className="text-muted-foreground text-xs hidden sm:inline">—</span>
-            <span className="text-xs text-muted-foreground truncate hidden sm:inline">{lead.service}</span>
+            <span className="text-muted-foreground text-xs">—</span>
+            <span className="text-xs text-muted-foreground truncate">{lead.service}</span>
           </div>
 
           {/* Phone */}
@@ -96,51 +177,7 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
           </div>
 
           {/* Actions menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer touch-manipulation"
-                aria-label="Actions"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Mark as</DropdownMenuLabel>
-              {availableActions.map((action) => (
-                <DropdownMenuItem
-                  key={action.status}
-                  onSelect={() => handleStatus(action.status)}
-                  className="cursor-pointer text-sm"
-                >
-                  {action.label}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Snooze</DropdownMenuLabel>
-              {SNOOZE_OPTIONS.map(({ label, days }) => (
-                <DropdownMenuItem
-                  key={days}
-                  onSelect={() => handleSnooze(days)}
-                  className="cursor-pointer text-sm"
-                >
-                  {label}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href={`/leads/${lead.id}`}>
-                  <span className="cursor-pointer text-sm w-full">View details</span>
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Service line on mobile (hidden on sm+) */}
-        <div className="sm:hidden px-3 pb-2 -mt-1">
-          <span className="text-xs text-muted-foreground">{lead.service}</span>
+          {actionsDropdown("end")}
         </div>
       </div>
     );
