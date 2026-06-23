@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useLeads } from "@/hooks/useLeads";
 import { useView } from "@/contexts/ViewContext";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { getSeedLeads } from "@/lib/leadUtils";
 import { ArrowRight, Bell, Clock, NotebookPen } from "lucide-react";
 
 const BENEFITS = [
@@ -26,9 +25,9 @@ const BENEFITS = [
 
 export default function Landing() {
   const [, navigate] = useLocation();
-  const { replaceAllLeads } = useLeads();
+  const { leads, replaceAllLeads } = useLeads();
   const { setDensity } = useView();
-  const { hasSeenDemo, markDemoSeen } = useOnboarding();
+  const { hasSeenDemo, markDemoSeen, startDemo } = useOnboarding();
 
   // Returning users skip straight to the dashboard
   useEffect(() => {
@@ -40,9 +39,8 @@ export default function Landing() {
   if (hasSeenDemo) return null;
 
   function handleStartDemo() {
-    markDemoSeen();
-    replaceAllLeads(getSeedLeads());
     setDensity("comfortable");
+    startDemo(replaceAllLeads, leads);
     navigate("/dashboard?demo=true");
   }
 

@@ -67,9 +67,9 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
         setLeads([]);
       }
     } else {
-      const seed = getSeedLeads();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-      setLeads(seed);
+      // New users start with an empty dashboard.
+      // Demo data is loaded separately via startDemo() in OnboardingContext.
+      setLeads([]);
     }
     setIsLoaded(true);
   }, []);

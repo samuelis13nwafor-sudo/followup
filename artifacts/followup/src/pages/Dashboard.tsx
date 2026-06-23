@@ -210,6 +210,34 @@ export default function Dashboard() {
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
   const isSearchActive = search.trim().length > 0;
 
+  // Fully empty state — show a friendly CTA instead of the dashboard grid
+  if (leads.length === 0) {
+    return (
+      <>
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-3">
+              <p className="text-lg font-semibold text-foreground">No leads yet.</p>
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+                Add your first lead to start tracking follow-ups.
+              </p>
+              <Link href="/leads/new">
+                <button
+                  type="button"
+                  className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer touch-manipulation"
+                >
+                  Add your first lead
+                </button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+        {isDemo && <WalkthroughOverlay onFinish={() => navigate("/dashboard")} />}
+      </>
+    );
+  }
+
   return (
     <>
       <div className="space-y-6">

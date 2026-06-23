@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, ChevronRight, X, CheckCircle2 } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
+import { useLeads } from "@/hooks/useLeads";
 
 interface Step {
   target: string | null;
@@ -38,7 +39,7 @@ const STEPS: Step[] = [
   {
     target: null,
     title: "You're ready.",
-    desc: "Try managing the demo leads — update a status, snooze one, or add a note. Your changes save automatically.",
+    desc: "The demo leads will be cleared now. Add your own leads to start tracking real follow-ups.",
   },
 ];
 
@@ -55,7 +56,8 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
   const [step, setStep] = useState(0);
   const [highlight, setHighlight] = useState<Rect | null>(null);
   const [, navigate] = useLocation();
-  const { markDemoSeen } = useOnboarding();
+  const { endDemo } = useOnboarding();
+  const { replaceAllLeads } = useLeads();
 
   const isFinal = step === STEPS.length - 1;
   const current = STEPS[step];
@@ -90,14 +92,8 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
     return () => window.removeEventListener("resize", measure);
   }, [measure]);
 
-  function handleFinish() {
-    markDemoSeen();
-    onFinish();
-    navigate("/dashboard");
-  }
-
-  function handleSkip() {
-    markDemoSeen();
+  function exitDemo() {
+    endDemo(replaceAllLeads);
     onFinish();
     navigate("/dashboard");
   }
@@ -125,7 +121,7 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
         <div
           className="fixed inset-0 bg-black/50 z-48"
           style={{ zIndex: 48 }}
-          onClick={handleFinish}
+          onClick={exitDemo}
         />
       )}
 
@@ -136,7 +132,7 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
       {!isFinal && (
         <button
           type="button"
-          onClick={handleSkip}
+          onClick={exitDemo}
           className="fixed top-4 right-4 flex items-center gap-1 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-600 shadow hover:bg-white transition-colors cursor-pointer touch-manipulation"
           style={{ zIndex: 52 }}
         >
@@ -213,10 +209,10 @@ export function WalkthroughOverlay({ onFinish }: { onFinish: () => void }) {
             </div>
             <button
               type="button"
-              onClick={handleFinish}
+              onClick={exitDemo}
               className="w-full rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-4 py-3 text-sm transition-colors cursor-pointer touch-manipulation"
             >
-              Get started
+              Start tracking my leads
             </button>
           </div>
         </div>

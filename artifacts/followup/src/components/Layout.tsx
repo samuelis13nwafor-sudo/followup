@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2, RotateCcw, UserX } from "lucide-react";
+import { LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2, RotateCcw, UserX, TestTubeDiagonal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 function DevPanel() {
   const { devModeEnabled, testDate, setDevModeEnabled, setTestDate, getToday } = useDevDate();
   const { replaceAllLeads } = useLeads();
-  const { resetOnboarding } = useOnboarding();
+  const { resetOnboarding, clearRealLeads } = useOnboarding();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -26,7 +26,7 @@ function DevPanel() {
     setLoading(null);
   }
 
-  function handleClear() {
+  function handleClearAll() {
     replaceAllLeads([]);
     toast({ title: "All leads cleared" });
   }
@@ -34,6 +34,11 @@ function DevPanel() {
   function handleReset() {
     replaceAllLeads(getSeedLeads());
     toast({ title: "Demo data restored" });
+  }
+
+  function handleClearReal() {
+    clearRealLeads(replaceAllLeads);
+    toast({ title: "Real leads cleared", description: "Your saved leads have been removed." });
   }
 
   return (
@@ -99,32 +104,70 @@ function DevPanel() {
 
               <button
                 type="button"
-                onClick={handleClear}
+                onClick={handleClearAll}
                 className="w-full flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 active:bg-red-100 transition-colors cursor-pointer touch-manipulation"
               >
                 <Trash2 className="h-3.5 w-3.5 shrink-0" />
                 Clear All Leads
               </button>
+
+              <button
+                type="button"
+                onClick={handleClearReal}
+                className="w-full flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 active:bg-red-100 transition-colors cursor-pointer touch-manipulation"
+              >
+                <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                Clear Real Leads
+              </button>
             </div>
 
-            {/* Onboarding */}
+            {/* Onboarding & Demo */}
             <div className="space-y-1.5 border-t border-amber-200 pt-3">
-              <p className="text-xs text-amber-700 font-medium">Onboarding</p>
+              <p className="text-xs text-amber-700 font-medium">Onboarding / Demo</p>
               <button
                 type="button"
                 onClick={() => {
-                  resetOnboarding();
+                  resetOnboarding(replaceAllLeads);
                   toast({ title: "Onboarding reset", description: "Landing page will show on next visit to /." });
                 }}
                 className="w-full flex items-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:bg-amber-200 transition-colors cursor-pointer touch-manipulation"
               >
                 <UserX className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-                Reset Onboarding
+                Reset Onboarding / Demo State
               </button>
             </div>
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function DemoModeBanner() {
+  const { isDemoMode, endDemo } = useOnboarding();
+  const { replaceAllLeads } = useLeads();
+  const [, navigate] = useLocation();
+
+  if (!isDemoMode) return null;
+
+  function handleExit() {
+    endDemo(replaceAllLeads);
+    navigate("/dashboard");
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-sm">
+      <div className="flex items-center gap-2 text-amber-800 font-medium">
+        <TestTubeDiagonal className="h-4 w-4 shrink-0 text-amber-600" />
+        Demo Mode — exploring sample leads
+      </div>
+      <button
+        type="button"
+        onClick={handleExit}
+        className="shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer touch-manipulation"
+      >
+        Exit Demo
+      </button>
     </div>
   );
 }
@@ -215,6 +258,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </header>
+
+        {/* Demo Mode banner — shown across all pages while demo is active */}
+        <DemoModeBanner />
 
         <main className="flex-1 p-4 md:p-8">
           <div className="mx-auto max-w-5xl">
