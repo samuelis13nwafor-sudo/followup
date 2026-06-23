@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import { Layout } from "@/components/Layout";
+import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import LeadList from "@/pages/LeadList";
 import AddLead from "@/pages/AddLead";
@@ -17,15 +18,28 @@ const queryClient = new QueryClient();
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/leads" component={LeadList} />
-        <Route path="/leads/new" component={AddLead} />
-        <Route path="/leads/:id" component={LeadDetail} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <Route path="/" component={Landing} />
+      <Route path="/dashboard">
+        <Layout>
+          <Dashboard />
+        </Layout>
+      </Route>
+      <Route path="/leads">
+        <Layout>
+          <LeadList />
+        </Layout>
+      </Route>
+      <Route path="/leads/new">
+        <Layout>
+          <AddLead />
+        </Layout>
+      </Route>
+      <Route path="/leads/:id">
+        {(params) => <Layout><LeadDetail /></Layout>}
+      </Route>
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 

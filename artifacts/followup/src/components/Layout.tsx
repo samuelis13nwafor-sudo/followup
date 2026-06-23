@@ -117,7 +117,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { devModeEnabled } = useDevDate();
 
   const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Leads", href: "/leads", icon: Users },
   ];
 
