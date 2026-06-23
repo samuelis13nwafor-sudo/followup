@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useLeads, Lead } from "../hooks/useLeads";
 import { LeadTaskCard } from "../components/LeadTaskCard";
-import { StatusBadge } from "../components/StatusBadge";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { useDevDate } from "@/contexts/DevDateContext";
-import { X } from "lucide-react";
+import { useView } from "@/contexts/ViewContext";
+import { X, AlignJustify, LayoutList } from "lucide-react";
 
 type DashFilter = "today" | "overdue" | "open" | "won" | null;
 
@@ -61,9 +61,10 @@ interface FilteredSectionProps {
   activeLeads: Lead[];
   wonLeads: Lead[];
   onClear: () => void;
+  compact: boolean;
 }
 
-function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads, wonLeads, onClear }: FilteredSectionProps) {
+function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads, wonLeads, onClear, compact }: FilteredSectionProps) {
   let displayLeads: Lead[];
   let title: string;
   let badgeCount: number | null = null;
@@ -142,9 +143,9 @@ function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads,
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className={compact ? "space-y-1.5" : "space-y-3"}>
           {displayLeads.map((lead) => (
-            <LeadTaskCard key={lead.id} lead={lead} />
+            <LeadTaskCard key={lead.id} lead={lead} compact={compact} />
           ))}
         </div>
       )}
@@ -155,11 +156,13 @@ function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads,
 export default function Dashboard() {
   const { leads, isLoaded } = useLeads();
   const { getToday, devModeEnabled, testDate } = useDevDate();
+  const { density, setDensity } = useView();
   const [activeFilter, setActiveFilter] = useState<DashFilter>(null);
 
   if (!isLoaded) return null;
 
   const today = getToday();
+  const compact = density === "compact";
   const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
   const wonLeads = leads.filter(l => l.status === "Won");
   const todayLeads = activeLeads.filter(l => l.followUpDate === today);
@@ -169,13 +172,16 @@ export default function Dashboard() {
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        {devModeEnabled && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            <span className="font-semibold">Time Travel active</span>
-            <span className="text-amber-600">—</span>
-            <span>Showing as of <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span></span>
-          </div>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {devModeEnabled && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <span className="font-semibold">Time Travel active</span>
+              <span className="text-amber-600">—</span>
+              <span>Showing as of <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span></span>
+            </div>
+          )}
+          <ViewToggle density={density} setDensity={setDensity} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -226,7 +232,33 @@ export default function Dashboard() {
         activeLeads={activeLeads}
         wonLeads={wonLeads}
         onClear={() => setActiveFilter(null)}
+        compact={compact}
       />
+    </div>
+  );
+}
+
+function ViewToggle({ density, setDensity }: { density: "comfortable" | "compact"; setDensity: (d: "comfortable" | "compact") => void }) {
+  return (
+    <div className="flex items-center rounded-lg border bg-card shadow-sm p-0.5 gap-0.5">
+      <button
+        type="button"
+        onClick={() => setDensity("comfortable")}
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${density === "comfortable" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+        title="Comfortable view"
+      >
+        <AlignJustify className="h-3.5 w-3.5" />
+        Comfortable
+      </button>
+      <button
+        type="button"
+        onClick={() => setDensity("compact")}
+        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${density === "compact" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+        title="Compact view"
+      >
+        <LayoutList className="h-3.5 w-3.5" />
+        Compact
+      </button>
     </div>
   );
 }

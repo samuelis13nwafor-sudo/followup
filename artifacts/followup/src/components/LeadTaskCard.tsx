@@ -5,11 +5,20 @@ import { addDaysToDate } from "../lib/leadUtils";
 import { StatusBadge } from "./StatusBadge";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
-import { Phone } from "lucide-react";
+import { Phone, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 interface LeadTaskCardProps {
   lead: Lead;
+  compact?: boolean;
 }
 
 const STATUS_ACTIONS: { label: string; status: LeadStatus; className: string }[] = [
@@ -25,13 +34,14 @@ const SNOOZE_OPTIONS = [
   { label: "+7 days", days: 7 },
 ];
 
-export function LeadTaskCard({ lead }: LeadTaskCardProps) {
+export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
   const { updateLead } = useLeads();
   const { getToday } = useDevDate();
   const { toast } = useToast();
   const today = getToday();
 
   const isOverdue = lead.followUpDate < today;
+  const availableActions = STATUS_ACTIONS.filter(a => a.status !== lead.status);
 
   function handleStatus(status: LeadStatus) {
     updateLead(lead.id, { status });
@@ -47,7 +57,94 @@ export function LeadTaskCard({ lead }: LeadTaskCardProps) {
     });
   }
 
-  const availableActions = STATUS_ACTIONS.filter(a => a.status !== lead.status);
+  const dateLabel = isOverdue
+    ? `Overdue — ${format(parseISO(lead.followUpDate), "MMM d")}`
+    : "Due Today";
+
+  if (compact) {
+    return (
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="flex items-center gap-2 px-3 py-2 flex-wrap sm:flex-nowrap">
+          {/* Name + service */}
+          <div className="min-w-0 flex items-center gap-1.5 flex-1">
+            <Link href={`/leads/${lead.id}`}>
+              <span className="font-semibold text-sm leading-tight hover:underline cursor-pointer whitespace-nowrap">
+                {lead.name}
+              </span>
+            </Link>
+            <span className="text-muted-foreground text-xs hidden sm:inline">—</span>
+            <span className="text-xs text-muted-foreground truncate hidden sm:inline">{lead.service}</span>
+          </div>
+
+          {/* Phone */}
+          <a
+            href={`tel:${lead.phone}`}
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline shrink-0"
+          >
+            <Phone className="h-3 w-3" />
+            {lead.phone}
+          </a>
+
+          {/* Date */}
+          <span className={`text-xs font-semibold shrink-0 ${isOverdue ? "text-destructive" : "text-foreground"}`}>
+            {dateLabel}
+          </span>
+
+          {/* Status badge */}
+          <div className="shrink-0">
+            <StatusBadge status={lead.status} />
+          </div>
+
+          {/* Actions menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer touch-manipulation"
+                aria-label="Actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Mark as</DropdownMenuLabel>
+              {availableActions.map((action) => (
+                <DropdownMenuItem
+                  key={action.status}
+                  onSelect={() => handleStatus(action.status)}
+                  className="cursor-pointer text-sm"
+                >
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Snooze</DropdownMenuLabel>
+              {SNOOZE_OPTIONS.map(({ label, days }) => (
+                <DropdownMenuItem
+                  key={days}
+                  onSelect={() => handleSnooze(days)}
+                  className="cursor-pointer text-sm"
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={`/leads/${lead.id}`}>
+                  <span className="cursor-pointer text-sm w-full">View details</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Service line on mobile (hidden on sm+) */}
+        <div className="sm:hidden px-3 pb-2 -mt-1">
+          <span className="text-xs text-muted-foreground">{lead.service}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border bg-card shadow-sm">
@@ -75,14 +172,11 @@ export function LeadTaskCard({ lead }: LeadTaskCardProps) {
             {lead.phone}
           </a>
           <span className={`text-xs font-semibold ${isOverdue ? "text-destructive" : "text-foreground"}`}>
-            {isOverdue
-              ? `Overdue — ${format(parseISO(lead.followUpDate), "MMM d")}`
-              : "Due Today"}
+            {dateLabel}
           </span>
         </div>
 
         <div className="border-t pt-3 space-y-2.5">
-          {/* Status actions */}
           <div className="flex flex-wrap gap-1.5">
             {availableActions.map((action) => (
               <button
@@ -96,7 +190,6 @@ export function LeadTaskCard({ lead }: LeadTaskCardProps) {
             ))}
           </div>
 
-          {/* Snooze */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs text-muted-foreground font-medium">Snooze:</span>
             {SNOOZE_OPTIONS.map(({ label, days }) => (

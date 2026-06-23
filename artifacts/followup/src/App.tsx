@@ -11,6 +11,7 @@ import AddLead from "@/pages/AddLead";
 import LeadDetail from "@/pages/LeadDetail";
 import { DevDateProvider } from "@/contexts/DevDateContext";
 import { LeadsProvider } from "@/contexts/LeadsContext";
+import { ViewProvider } from "@/contexts/ViewContext";
 
 const queryClient = new QueryClient();
 
@@ -34,10 +35,12 @@ function App() {
       <TooltipProvider>
         <LeadsProvider>
           <DevDateProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
+            <ViewProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </ViewProvider>
           </DevDateProvider>
         </LeadsProvider>
       </TooltipProvider>
