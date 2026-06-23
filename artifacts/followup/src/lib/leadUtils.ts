@@ -18,12 +18,18 @@ export function addDaysToDate(fromDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function entry(message: string, daysAgo = 0): { id: string; date: string; message: string } {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return { id: crypto.randomUUID(), date: d.toISOString(), message };
+}
+
 export function getSeedLeads(): Lead[] {
   const today = getTodayDateString();
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterday = yesterdayDate.toISOString().slice(0, 10);
-  
+
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
   const tomorrow = tomorrowDate.toISOString().slice(0, 10);
@@ -44,7 +50,11 @@ export function getSeedLeads(): Lead[] {
       followUpDate: yesterday,
       status: "New",
       createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000 * 2).toISOString()
+      updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      activity: [
+        entry("Lead created", 2),
+        entry("Note updated", 2),
+      ],
     },
     {
       id: crypto.randomUUID(),
@@ -56,7 +66,11 @@ export function getSeedLeads(): Lead[] {
       followUpDate: today,
       status: "Contacted",
       createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000 * 1).toISOString()
+      updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+      activity: [
+        entry("Lead created", 1),
+        entry("Status changed to Contacted", 1),
+      ],
     },
     {
       id: crypto.randomUUID(),
@@ -69,7 +83,13 @@ export function getSeedLeads(): Lead[] {
       followUpDate: today,
       status: "Quote Sent",
       createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      activity: [
+        entry("Lead created", 3),
+        entry("Status changed to Contacted", 2),
+        entry("Status changed to Quote Sent", 1),
+        entry("Note updated", 1),
+      ],
     },
     {
       id: crypto.randomUUID(),
@@ -81,7 +101,10 @@ export function getSeedLeads(): Lead[] {
       followUpDate: tomorrow,
       status: "New",
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      activity: [
+        entry("Lead created", 0),
+      ],
     },
     {
       id: crypto.randomUUID(),
@@ -93,7 +116,13 @@ export function getSeedLeads(): Lead[] {
       followUpDate: nextWeek,
       status: "Won",
       createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000 * 1).toISOString()
-    }
+      updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+      activity: [
+        entry("Lead created", 5),
+        entry("Status changed to Contacted", 4),
+        entry("Status changed to Quote Sent", 3),
+        entry("Status changed to Won", 1),
+      ],
+    },
   ];
 }

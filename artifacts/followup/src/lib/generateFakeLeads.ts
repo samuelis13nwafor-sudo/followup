@@ -106,10 +106,29 @@ function followUpDate(today: string): string {
   return dateOffset(today, pick(OFFSETS));
 }
 
-function createdAt(daysAgo: number): string {
+function daysAgoISO(daysAgo: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
   return d.toISOString();
+}
+
+function makeActivity(status: LeadStatus, daysAgo: number) {
+  const entries = [
+    { id: crypto.randomUUID(), date: daysAgoISO(daysAgo), message: "Lead created" },
+  ];
+  if (status === "Contacted" || status === "Quote Sent" || status === "Won" || status === "Lost") {
+    entries.push({ id: crypto.randomUUID(), date: daysAgoISO(Math.max(0, daysAgo - 1)), message: "Status changed to Contacted" });
+  }
+  if (status === "Quote Sent" || status === "Won" || status === "Lost") {
+    entries.push({ id: crypto.randomUUID(), date: daysAgoISO(Math.max(0, daysAgo - 2)), message: "Status changed to Quote Sent" });
+  }
+  if (status === "Won") {
+    entries.push({ id: crypto.randomUUID(), date: daysAgoISO(Math.max(0, daysAgo - 3)), message: "Status changed to Won" });
+  }
+  if (status === "Lost") {
+    entries.push({ id: crypto.randomUUID(), date: daysAgoISO(Math.max(0, daysAgo - 3)), message: "Status changed to Lost" });
+  }
+  return entries;
 }
 
 export function generateFakeLeads(count: number, today: string): Lead[] {
@@ -140,8 +159,9 @@ export function generateFakeLeads(count: number, today: string): Lead[] {
       notes: pick(NOTES_POOL),
       followUpDate: followUpDate(today),
       status,
-      createdAt: createdAt(daysAgo),
-      updatedAt: createdAt(Math.floor(daysAgo / 2)),
+      createdAt: daysAgoISO(daysAgo),
+      updatedAt: daysAgoISO(Math.floor(daysAgo / 2)),
+      activity: makeActivity(status, daysAgo),
     });
   }
 
