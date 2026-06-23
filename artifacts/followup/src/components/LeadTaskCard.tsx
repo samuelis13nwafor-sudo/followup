@@ -107,40 +107,65 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
   if (compact) {
     return (
       <div className="rounded-lg border bg-card shadow-sm">
-        {/* ── Mobile compact layout (<640px) ── */}
-        <div className="sm:hidden px-3 py-2 space-y-1.5">
-          {/* Row 1: name + status */}
-          <div className="flex items-center justify-between gap-2">
-            <Link href={`/leads/${lead.id}`}>
-              <span className="font-semibold text-sm leading-tight hover:underline cursor-pointer truncate max-w-[200px] block">
-                {lead.name}
-              </span>
-            </Link>
+        {/*
+         * Mobile compact layout (<640px):
+         * Compact mode is disabled on mobile until a better design is created.
+         * On small screens we always render the Comfortable layout instead.
+         */}
+        <div className="sm:hidden p-3 space-y-2.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Link href={`/leads/${lead.id}`}>
+                <span className="font-semibold text-sm leading-tight hover:underline cursor-pointer line-clamp-1">
+                  {lead.name}
+                </span>
+              </Link>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{lead.service}</p>
+            </div>
             <div className="shrink-0">
               <StatusBadge status={lead.status} />
             </div>
           </div>
 
-          {/* Row 2: service */}
-          <p className="text-xs text-muted-foreground truncate">{lead.service}</p>
-
-          {/* Row 3: phone + date */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-3">
             <a
               href={`tel:${lead.phone}`}
-              className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
             >
-              <Phone className="h-3 w-3 shrink-0" />
+              <Phone className="h-3.5 w-3.5" />
               {lead.phone}
             </a>
-            <span className={`text-xs font-semibold shrink-0 ${isOverdue ? "text-destructive" : "text-foreground"}`}>
+            <span className={`text-xs font-semibold ${isOverdue ? "text-destructive" : "text-foreground"}`}>
               {dateLabel}
             </span>
           </div>
 
-          {/* Row 4: actions menu */}
-          <div className="flex justify-end">
-            {actionsDropdown("end")}
+          <div className="border-t pt-2.5 space-y-2">
+            <div className="flex flex-wrap gap-1.5">
+              {availableActions.map((action) => (
+                <button
+                  key={action.status}
+                  type="button"
+                  onClick={() => handleStatus(action.status)}
+                  className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${action.className}`}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs text-muted-foreground font-medium">Snooze:</span>
+              {SNOOZE_OPTIONS.map(({ label, days }) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => handleSnooze(days)}
+                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer touch-manipulation"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

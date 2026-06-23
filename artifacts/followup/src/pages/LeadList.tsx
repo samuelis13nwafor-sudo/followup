@@ -50,7 +50,8 @@ function InlineActions({ lead }: { lead: Lead }) {
 
 function ViewToggle({ density, setDensity }: { density: "comfortable" | "compact"; setDensity: (d: "comfortable" | "compact") => void }) {
   return (
-    <div className="flex items-center rounded-lg border bg-card shadow-sm p-0.5 gap-0.5">
+    // Hidden on mobile — compact mode is desktop/tablet only
+    <div className="hidden sm:flex items-center rounded-lg border bg-card shadow-sm p-0.5 gap-0.5">
       <button
         type="button"
         onClick={() => setDensity("comfortable")}
