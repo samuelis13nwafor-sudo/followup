@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { useDevDate } from "@/contexts/DevDateContext";
 import { useView } from "@/contexts/ViewContext";
-import { X, AlignJustify, LayoutList } from "lucide-react";
+import { X, AlignJustify, LayoutList, Search } from "lucide-react";
 
 type DashFilter = "today" | "overdue" | "open" | "won" | null;
 
@@ -53,6 +53,16 @@ function StatCard({
   );
 }
 
+function matchesSearch(lead: Lead, q: string): boolean {
+  if (!q) return true;
+  const lower = q.toLowerCase();
+  return (
+    lead.name.toLowerCase().includes(lower) ||
+    lead.phone.toLowerCase().includes(lower) ||
+    lead.service.toLowerCase().includes(lower)
+  );
+}
+
 interface FilteredSectionProps {
   filter: DashFilter;
   leads: Lead[];
@@ -62,40 +72,50 @@ interface FilteredSectionProps {
   wonLeads: Lead[];
   onClear: () => void;
   compact: boolean;
+  search: string;
+  onClearSearch: () => void;
 }
 
-function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads, wonLeads, onClear, compact }: FilteredSectionProps) {
-  let displayLeads: Lead[];
+function FilteredSection({
+  filter, todayLeads, overdueLeads, activeLeads, wonLeads,
+  onClear, compact, search, onClearSearch,
+}: FilteredSectionProps) {
+  let baseLeads: Lead[];
   let title: string;
   let badgeCount: number | null = null;
 
   switch (filter) {
     case "today":
-      displayLeads = todayLeads;
+      baseLeads = todayLeads;
       title = "Due Today";
       break;
     case "overdue":
-      displayLeads = overdueLeads;
+      baseLeads = overdueLeads;
       title = "Overdue";
       break;
     case "open":
-      displayLeads = activeLeads.slice().sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+      baseLeads = activeLeads.slice().sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
       title = "All Open Leads";
       break;
     case "won":
-      displayLeads = wonLeads;
+      baseLeads = wonLeads;
       title = "Won Leads";
       break;
     default: {
       const actionRequired = [...overdueLeads, ...todayLeads].sort((a, b) =>
         a.followUpDate.localeCompare(b.followUpDate)
       );
-      displayLeads = actionRequired;
+      baseLeads = actionRequired;
       title = overdueLeads.length > 0 ? "Overdue + Today's Follow Ups" : "Today's Follow Ups";
       badgeCount = actionRequired.length > 0 ? actionRequired.length : null;
       break;
     }
   }
+
+  const isSearchActive = search.trim().length > 0;
+  const displayLeads = isSearchActive
+    ? baseLeads.filter(l => matchesSearch(l, search.trim()))
+    : baseLeads;
 
   const emptyMessages: Record<string, string> = {
     today: "No leads due today.",
@@ -108,15 +128,15 @@ function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
           {title}
-          {badgeCount !== null && (
+          {badgeCount !== null && !isSearchActive && (
             <span className="inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
               {badgeCount}
             </span>
           )}
-          {filter !== null && (
+          {(filter !== null || isSearchActive) && (
             <span className="text-sm font-normal text-muted-foreground">({displayLeads.length})</span>
           )}
         </h2>
@@ -138,8 +158,23 @@ function FilteredSection({ filter, leads, todayLeads, overdueLeads, activeLeads,
 
       {displayLeads.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-base font-medium text-muted-foreground">{emptyMsg}</p>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-2">
+            {isSearchActive ? (
+              <>
+                <p className="text-base font-medium text-muted-foreground">
+                  No results for &ldquo;{search.trim()}&rdquo;
+                </p>
+                <button
+                  type="button"
+                  onClick={onClearSearch}
+                  className="text-sm text-primary hover:underline cursor-pointer"
+                >
+                  Clear search
+                </button>
+              </>
+            ) : (
+              <p className="text-base font-medium text-muted-foreground">{emptyMsg}</p>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -158,6 +193,7 @@ export default function Dashboard() {
   const { getToday, devModeEnabled, testDate } = useDevDate();
   const { density, setDensity } = useView();
   const [activeFilter, setActiveFilter] = useState<DashFilter>(null);
+  const [search, setSearch] = useState("");
 
   if (!isLoaded) return null;
 
@@ -167,9 +203,10 @@ export default function Dashboard() {
   const wonLeads = leads.filter(l => l.status === "Won");
   const todayLeads = activeLeads.filter(l => l.followUpDate === today);
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
+  const isSearchActive = search.trim().length > 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-3 flex-wrap">
@@ -224,6 +261,28 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Search bar — always visible, above lead list */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, phone, or service…"
+          className="w-full rounded-lg border bg-card pl-9 pr-9 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+        />
+        {isSearchActive && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       <FilteredSection
         filter={activeFilter}
         leads={leads}
@@ -233,6 +292,8 @@ export default function Dashboard() {
         wonLeads={wonLeads}
         onClear={() => setActiveFilter(null)}
         compact={compact}
+        search={search}
+        onClearSearch={() => setSearch("")}
       />
     </div>
   );
