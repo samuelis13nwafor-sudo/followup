@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { useLeads } from "@/hooks/useLeads";
+import { useView } from "@/contexts/ViewContext";
 import { getSeedLeads } from "@/lib/leadUtils";
 import { ArrowRight, Bell, Clock, NotebookPen } from "lucide-react";
 
@@ -24,10 +25,12 @@ const BENEFITS = [
 export default function Landing() {
   const [, navigate] = useLocation();
   const { replaceAllLeads } = useLeads();
+  const { setDensity } = useView();
 
   function handleStartDemo() {
     replaceAllLeads(getSeedLeads());
-    navigate("/dashboard");
+    setDensity("comfortable");
+    navigate("/dashboard?demo=true");
   }
 
   return (

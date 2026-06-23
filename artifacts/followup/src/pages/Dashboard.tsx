@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useLeads, Lead } from "../hooks/useLeads";
 import { LeadTaskCard } from "../components/LeadTaskCard";
-import { Link } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { useDevDate } from "@/contexts/DevDateContext";
 import { useView } from "@/contexts/ViewContext";
 import { X, AlignJustify, LayoutList, Search } from "lucide-react";
+import { WalkthroughOverlay } from "@/components/WalkthroughOverlay";
 
 type DashFilter = "today" | "overdue" | "open" | "won" | null;
 
@@ -127,7 +128,7 @@ function FilteredSection({
   const emptyMsg = emptyMessages[filter ?? "default"] ?? emptyMessages.default;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-walkthrough="lead-list">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
           {title}
@@ -179,8 +180,8 @@ function FilteredSection({
         </Card>
       ) : (
         <div className={compact ? "space-y-1.5" : "space-y-3"}>
-          {displayLeads.map((lead) => (
-            <LeadTaskCard key={lead.id} lead={lead} compact={compact} />
+          {displayLeads.map((lead, idx) => (
+            <LeadTaskCard key={lead.id} lead={lead} compact={compact} isFirst={idx === 0} />
           ))}
         </div>
       )}
@@ -194,6 +195,10 @@ export default function Dashboard() {
   const { density, setDensity } = useView();
   const [activeFilter, setActiveFilter] = useState<DashFilter>(null);
   const [search, setSearch] = useState("");
+  const searchStr = useSearch();
+  const [, navigate] = useLocation();
+
+  const isDemo = new URLSearchParams(searchStr).get("demo") === "true";
 
   if (!isLoaded) return null;
 
@@ -206,96 +211,102 @@ export default function Dashboard() {
   const isSearchActive = search.trim().length > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <div className="flex items-center gap-3 flex-wrap">
-          {devModeEnabled && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              <span className="font-semibold">Time Travel active</span>
-              <span className="text-amber-600">—</span>
-              <span>Showing as of <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span></span>
-            </div>
-          )}
-          <ViewToggle density={density} setDensity={setDensity} />
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            {devModeEnabled && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <span className="font-semibold">Time Travel active</span>
+                <span className="text-amber-600">—</span>
+                <span>Showing as of <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span></span>
+              </div>
+            )}
+            <ViewToggle density={density} setDensity={setDensity} />
+          </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-walkthrough="stat-cards">
+          <StatCard
+            label="Due Today"
+            value={todayLeads.length}
+            filterKey="today"
+            activeFilter={activeFilter}
+            onClick={setActiveFilter}
+            activeClass="ring-2 ring-primary bg-primary/5"
+          />
+          <StatCard
+            label="Overdue"
+            value={overdueLeads.length}
+            filterKey="overdue"
+            activeFilter={activeFilter}
+            onClick={setActiveFilter}
+            labelColor="text-destructive"
+            valueColor="text-destructive"
+            borderClass={overdueLeads.length > 0 ? "border-destructive/30" : ""}
+            activeClass="ring-2 ring-destructive bg-destructive/5"
+          />
+          <StatCard
+            label="Total Open"
+            value={activeLeads.length}
+            filterKey="open"
+            activeFilter={activeFilter}
+            onClick={setActiveFilter}
+            activeClass="ring-2 ring-primary bg-primary/5"
+          />
+          <StatCard
+            label="Won"
+            value={wonLeads.length}
+            filterKey="won"
+            activeFilter={activeFilter}
+            onClick={setActiveFilter}
+            labelColor="text-emerald-600"
+            valueColor="text-emerald-600"
+            activeClass="ring-2 ring-emerald-600 bg-emerald-50"
+          />
+        </div>
+
+        {/* Search bar — always visible, above lead list */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, phone, or service…"
+            className="w-full rounded-lg border bg-card pl-9 pr-9 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+          />
+          {isSearchActive && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <FilteredSection
+          filter={activeFilter}
+          leads={leads}
+          todayLeads={todayLeads}
+          overdueLeads={overdueLeads}
+          activeLeads={activeLeads}
+          wonLeads={wonLeads}
+          onClear={() => setActiveFilter(null)}
+          compact={compact}
+          search={search}
+          onClearSearch={() => setSearch("")}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="Due Today"
-          value={todayLeads.length}
-          filterKey="today"
-          activeFilter={activeFilter}
-          onClick={setActiveFilter}
-          activeClass="ring-2 ring-primary bg-primary/5"
-        />
-        <StatCard
-          label="Overdue"
-          value={overdueLeads.length}
-          filterKey="overdue"
-          activeFilter={activeFilter}
-          onClick={setActiveFilter}
-          labelColor="text-destructive"
-          valueColor="text-destructive"
-          borderClass={overdueLeads.length > 0 ? "border-destructive/30" : ""}
-          activeClass="ring-2 ring-destructive bg-destructive/5"
-        />
-        <StatCard
-          label="Total Open"
-          value={activeLeads.length}
-          filterKey="open"
-          activeFilter={activeFilter}
-          onClick={setActiveFilter}
-          activeClass="ring-2 ring-primary bg-primary/5"
-        />
-        <StatCard
-          label="Won"
-          value={wonLeads.length}
-          filterKey="won"
-          activeFilter={activeFilter}
-          onClick={setActiveFilter}
-          labelColor="text-emerald-600"
-          valueColor="text-emerald-600"
-          activeClass="ring-2 ring-emerald-600 bg-emerald-50"
-        />
-      </div>
-
-      {/* Search bar — always visible, above lead list */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone, or service…"
-          className="w-full rounded-lg border bg-card pl-9 pr-9 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
-        />
-        {isSearchActive && (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            aria-label="Clear search"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      <FilteredSection
-        filter={activeFilter}
-        leads={leads}
-        todayLeads={todayLeads}
-        overdueLeads={overdueLeads}
-        activeLeads={activeLeads}
-        wonLeads={wonLeads}
-        onClear={() => setActiveFilter(null)}
-        compact={compact}
-        search={search}
-        onClearSearch={() => setSearch("")}
-      />
-    </div>
+      {isDemo && (
+        <WalkthroughOverlay onFinish={() => navigate("/dashboard")} />
+      )}
+    </>
   );
 }
 

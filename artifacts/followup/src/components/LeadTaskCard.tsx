@@ -21,6 +21,7 @@ import {
 interface LeadTaskCardProps {
   lead: Lead;
   compact?: boolean;
+  isFirst?: boolean;
 }
 
 const STATUS_ACTIONS: { label: string; status: LeadStatus; className: string }[] = [
@@ -36,7 +37,7 @@ const SNOOZE_OPTIONS = [
   { label: "+7 days", days: 7 },
 ];
 
-export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
+export function LeadTaskCard({ lead, compact = false, isFirst = false }: LeadTaskCardProps) {
   const { updateLead } = useLeads();
   const { getToday } = useDevDate();
   const { toast } = useToast();
@@ -272,6 +273,7 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
         <button
           type="button"
           onClick={() => setNotesOpen(true)}
+          data-walkthrough={isFirst ? "notes-button" : undefined}
           className={`w-full text-left rounded-md border px-3 py-2 text-xs transition-colors cursor-pointer touch-manipulation ${
             lead.notes
               ? "border-amber-200 bg-amber-50 hover:bg-amber-100"
@@ -291,7 +293,7 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
         </button>
 
         <div className="border-t pt-3 space-y-2.5">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" data-walkthrough={isFirst ? "status-actions" : undefined}>
             {availableActions.map((action) => (
               <button
                 key={action.status}
@@ -304,7 +306,7 @@ export function LeadTaskCard({ lead, compact = false }: LeadTaskCardProps) {
             ))}
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap" data-walkthrough={isFirst ? "snooze-actions" : undefined}>
             <span className="text-xs text-muted-foreground font-medium">Snooze:</span>
             {SNOOZE_OPTIONS.map(({ label, days }) => (
               <button
