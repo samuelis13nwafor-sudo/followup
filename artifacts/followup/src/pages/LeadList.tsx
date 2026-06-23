@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLeads, Lead, LeadStatus } from "../hooks/useLeads";
 import { StatusBadge } from "../components/StatusBadge";
 import { LeadTaskCard } from "../components/LeadTaskCard";
@@ -8,7 +8,7 @@ import { addDaysToDate } from "../lib/leadUtils";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, AlignJustify, LayoutList } from "lucide-react";
+import { PlusCircle, AlignJustify, LayoutList, Search, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STATUS_ACTIONS: { label: string; status: LeadStatus; className: string }[] = [
@@ -74,33 +74,53 @@ function ViewToggle({ density, setDensity }: { density: "comfortable" | "compact
   );
 }
 
+function matchesSearch(lead: Lead, query: string): boolean {
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
+  return (
+    lead.name.toLowerCase().includes(q) ||
+    lead.phone.toLowerCase().includes(q) ||
+    lead.service.toLowerCase().includes(q)
+  );
+}
+
 export default function LeadList() {
   const { leads, isLoaded } = useLeads();
   const { getToday } = useDevDate();
   const { density, setDensity } = useView();
   const [filter, setFilter] = useState("all");
-
-  if (!isLoaded) return null;
+  const [search, setSearch] = useState("");
 
   const today = getToday();
   const compact = density === "compact";
 
-  const filteredLeads = leads.filter(lead => {
+  const afterFilter = useMemo(() => leads.filter(lead => {
     if (filter === "all") return true;
     if (filter === "today") return lead.followUpDate === today && lead.status !== "Won" && lead.status !== "Lost";
     if (filter === "overdue") return lead.followUpDate < today && lead.status !== "Won" && lead.status !== "Lost";
     if (filter === "won") return lead.status === "Won";
     if (filter === "lost") return lead.status === "Lost";
     return true;
-  }).sort((a, b) => {
-    if (filter === "overdue" || filter === "today") {
-      return a.followUpDate.localeCompare(b.followUpDate);
-    }
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  }), [leads, filter, today]);
+
+  const filteredLeads = useMemo(() => afterFilter
+    .filter(lead => matchesSearch(lead, search))
+    .sort((a, b) => {
+      if (filter === "overdue" || filter === "today") {
+        return a.followUpDate.localeCompare(b.followUpDate);
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }),
+  [afterFilter, search, filter]);
+
+  if (!isLoaded) return null;
+
+  const isSearchActive = search.trim().length > 0;
+  const showCount = isSearchActive || filter !== "all";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
         <div className="flex items-center gap-3 flex-wrap">
@@ -114,7 +134,30 @@ export default function LeadList() {
         </div>
       </div>
 
-      <Tabs value={filter} onValueChange={setFilter} className="w-full">
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, phone, or service…"
+          className="w-full rounded-lg border bg-card pl-9 pr-9 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+        />
+        {isSearchActive && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Filter tabs */}
+      <Tabs value={filter} onValueChange={(v) => setFilter(v)} className="w-full">
         <TabsList className="flex flex-wrap h-auto bg-muted/50 p-1 gap-0.5">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="today">Due Today</TabsTrigger>
@@ -124,9 +167,38 @@ export default function LeadList() {
         </TabsList>
       </Tabs>
 
+      {/* Count line */}
+      {showCount && filteredLeads.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Showing <span className="font-semibold text-foreground">{filteredLeads.length}</span> of{" "}
+          <span className="font-semibold text-foreground">{leads.length}</span> leads
+          {isSearchActive && (
+            <> for <span className="font-semibold text-foreground">&ldquo;{search.trim()}&rdquo;</span></>
+          )}
+        </p>
+      )}
+
+      {/* Results */}
       {filteredLeads.length === 0 ? (
         <div className="rounded-lg border border-dashed flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-          <p className="font-medium">No leads in this view.</p>
+          {isSearchActive ? (
+            <>
+              <p className="font-medium">No matching leads found</p>
+              <p className="text-sm mt-1">
+                No results for &ldquo;{search.trim()}&rdquo;
+                {filter !== "all" && " in this filter"}.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="mt-3 text-sm text-primary hover:underline cursor-pointer"
+              >
+                Clear search
+              </button>
+            </>
+          ) : (
+            <p className="font-medium">No leads in this view.</p>
+          )}
         </div>
       ) : (
         <>
