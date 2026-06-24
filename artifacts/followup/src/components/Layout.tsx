@@ -17,7 +17,7 @@ import { Link, useLocation } from "wouter";
 
   function DevPanel() {
     const { devModeEnabled, testDate, setDevModeEnabled, setTestDate, getToday } = useDevDate();
-    const { replaceAllLeads } = useLeads();
+    const { leads, replaceAllLeads, storageKey } = useLeads();
     const { resetOnboarding, clearRealLeads } = useOnboarding();
     const { user } = useAuth();
     const { toast } = useToast();
@@ -110,6 +110,14 @@ import { Link, useLocation } from "wouter";
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-amber-700 shrink-0">User ID</span>
                         <span className="font-mono text-amber-900">{user.id.slice(0, 8)}…</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-amber-700 shrink-0">Leads (this user)</span>
+                        <span className="font-mono font-semibold text-emerald-700">{leads.length}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-amber-700 shrink-0">Storage key</span>
+                        <span className="font-mono text-amber-900 text-right break-all text-[10px] max-w-[150px]">{storageKey}</span>
                       </div>
                     </>
                   )}

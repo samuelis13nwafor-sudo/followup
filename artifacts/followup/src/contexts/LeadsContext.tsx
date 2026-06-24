@@ -1,13 +1,14 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { getSeedLeads } from "../lib/leadUtils";
 import { format } from "date-fns";
+import { useAuth } from "./AuthContext";
 
 export type LeadStatus = "New" | "Contacted" | "Quote Sent" | "Won" | "Lost";
 export type LeadSource = "Walk-in" | "Referral" | "Phone call" | "Online" | "Social media" | "Other";
 
 export interface ActivityEntry {
   id: string;
-  date: string; // ISO timestamp
+  date: string;
   message: string;
 }
 
@@ -29,6 +30,7 @@ export interface Lead {
 interface LeadsContextValue {
   leads: Lead[];
   isLoaded: boolean;
+  storageKey: string;
   addLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "activity">) => Lead;
   updateLead: (id: string, updates: Partial<Omit<Lead, "id" | "createdAt" | "updatedAt" | "activity">>) => void;
   deleteLead: (id: string) => void;
@@ -38,7 +40,7 @@ interface LeadsContextValue {
 
 const LeadsContext = createContext<LeadsContextValue | null>(null);
 
-const STORAGE_KEY = "followup_leads";
+const OLD_SHARED_KEY = "followup_leads";
 
 function makeEntry(message: string): ActivityEntry {
   return { id: crypto.randomUUID(), date: new Date().toISOString(), message };
@@ -53,26 +55,38 @@ function formatDate(iso: string): string {
 }
 
 export function LeadsProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: authLoading } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const storageKey = user ? `followup_leads_${user.id}` : "followup_leads_demo";
+
+  const storageKeyRef = useRef(storageKey);
+  storageKeyRef.current = storageKey;
+
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    if (authLoading) {
+      setIsLoaded(false);
+      return;
+    }
+
+    if (localStorage.getItem(OLD_SHARED_KEY) !== null) {
+      localStorage.removeItem(OLD_SHARED_KEY);
+    }
+
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       try {
         const parsed: Lead[] = JSON.parse(stored);
-        // Backfill activity array for leads that predate this feature
         setLeads(parsed.map(l => ({ ...l, activity: l.activity ?? [] })));
       } catch {
         setLeads([]);
       }
     } else {
-      // New users start with an empty dashboard.
-      // Demo data is loaded separately via startDemo() in OnboardingContext.
       setLeads([]);
     }
     setIsLoaded(true);
-  }, []);
+  }, [authLoading, storageKey]);
 
   const addLead = useCallback(
     (lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "activity">) => {
@@ -86,7 +100,7 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
       };
       setLeads((prev) => {
         const updated = [...prev, newLead];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(storageKeyRef.current, JSON.stringify(updated));
         return updated;
       });
       return newLead;
@@ -119,7 +133,7 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
             activity: [...(l.activity ?? []), ...newEntries],
           };
         });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(storageKeyRef.current, JSON.stringify(updated));
         return updated;
       });
     },
@@ -129,7 +143,7 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
   const deleteLead = useCallback((id: string) => {
     setLeads((prev) => {
       const updated = prev.filter((l) => l.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(storageKeyRef.current, JSON.stringify(updated));
       return updated;
     });
   }, []);
@@ -140,12 +154,12 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const replaceAllLeads = useCallback((newLeads: Lead[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
+    localStorage.setItem(storageKeyRef.current, JSON.stringify(newLeads));
     setLeads(newLeads);
   }, []);
 
   return (
-    <LeadsContext.Provider value={{ leads, isLoaded, addLead, updateLead, deleteLead, getLead, replaceAllLeads }}>
+    <LeadsContext.Provider value={{ leads, isLoaded, storageKey, addLead, updateLead, deleteLead, getLead, replaceAllLeads }}>
       {children}
     </LeadsContext.Provider>
   );
