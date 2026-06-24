@@ -11,75 +11,68 @@ import { WalkthroughOverlay } from "@/components/WalkthroughOverlay";
 import { OnboardingWalkthrough } from "@/components/OnboardingWalkthrough";
 import { DemoBanner } from "@/components/DemoBanner";
 
-type DashFilter = "today" | "overdue" | "open" | "won" | null;
+type DashFilter =
+  | "all" | "open" | "won" | "closed"
+  | "today" | "overdue" | "snoozed" | "new"
+  | null;
 
-// ─── Summary Stats ─────────────────────────────────────────────────────────────
+// ─── Unified filter card ────────────────────────────────────────────────────────
 
-interface StatMetric {
+interface FilterCardProps {
   label: string;
   value: string | number;
   sub?: string;
-  valueClass?: string;
-}
-
-function SummaryStats({ metrics }: { metrics: StatMetric[] }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {metrics.map(({ label, value, sub, valueClass }) => (
-        <div key={label} className="rounded-xl border bg-card px-4 py-3.5 space-y-0.5 shadow-sm">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-          <p className={`text-2xl font-bold tracking-tight ${valueClass ?? "text-foreground"}`}>{value}</p>
-          {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Filter stat cards ──────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  label: string;
-  value: number;
   filterKey: DashFilter;
   activeFilter: DashFilter;
   onClick: (key: DashFilter) => void;
-  labelColor?: string;
-  valueColor?: string;
-  activeClass?: string;
-  borderClass?: string;
+  valueCls?: string;
+  labelCls?: string;
+  activeBg?: string;
+  activeBorder?: string;
+  activeRing?: string;
+  urgentBorder?: boolean;
 }
 
-function StatCard({
-  label, value, filterKey, activeFilter, onClick,
-  labelColor = "text-muted-foreground",
-  valueColor = "text-foreground",
-  activeClass = "ring-2 ring-primary bg-primary/5",
-  borderClass = "",
-}: StatCardProps) {
+function FilterCard({
+  label, value, sub,
+  filterKey, activeFilter, onClick,
+  valueCls = "text-foreground",
+  labelCls = "text-muted-foreground",
+  activeBg = "bg-primary/5",
+  activeBorder = "border-primary/40",
+  activeRing = "ring-primary/50",
+  urgentBorder = false,
+}: FilterCardProps) {
   const isActive = activeFilter === filterKey;
+
   return (
     <button
+      type="button"
       onClick={() => onClick(isActive ? null : filterKey)}
-      className={[
-        "rounded-lg border bg-card text-left shadow-sm w-full transition-all duration-150",
-        "hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5",
-        "active:translate-y-0 active:shadow-sm active:scale-[0.98]",
-        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        borderClass,
-        isActive ? activeClass : "",
-      ].join(" ")}
       aria-pressed={isActive}
+      className={[
+        "group rounded-xl border bg-card text-left shadow-sm w-full",
+        "transition-all duration-150 cursor-pointer touch-manipulation",
+        "hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        urgentBorder && !isActive ? "border-red-200" : "",
+        isActive ? `${activeBg} border-2 ${activeBorder} ring-1 ${activeRing} shadow-none translate-y-0` : "hover:border-slate-300",
+      ].filter(Boolean).join(" ")}
     >
-      <div className="pb-1 pt-4 px-4">
-        <p className={`text-xs font-semibold uppercase tracking-wide ${labelColor}`}>{label}</p>
+      <div className="px-4 pt-4 pb-1">
+        <p className={`text-xs font-semibold uppercase tracking-wide leading-none ${isActive ? "opacity-80" : labelCls}`}>{label}</p>
       </div>
-      <div className="px-4 pb-4">
-        <p className={`text-3xl font-bold ${valueColor}`}>{value}</p>
+      <div className="px-4 pb-3.5 flex items-end justify-between gap-2">
+        <p className={`text-2xl font-bold tracking-tight leading-none ${valueCls}`}>{value}</p>
+        {sub && (
+          <p className="text-[10px] text-muted-foreground leading-tight pb-0.5 text-right max-w-[80px]">{sub}</p>
+        )}
       </div>
     </button>
   );
 }
+
+// ─── Filtered lead list section ─────────────────────────────────────────────────
 
 function matchesSearch(lead: Lead, q: string): boolean {
   if (!q) return true;
@@ -94,62 +87,83 @@ function matchesSearch(lead: Lead, q: string): boolean {
 interface FilteredSectionProps {
   filter: DashFilter;
   leads: Lead[];
-  todayLeads: Lead[];
-  overdueLeads: Lead[];
-  activeLeads: Lead[];
-  wonLeads: Lead[];
+  today: string;
   onClear: () => void;
   compact: boolean;
   search: string;
   onClearSearch: () => void;
 }
 
-function FilteredSection({
-  filter, todayLeads, overdueLeads, activeLeads, wonLeads,
-  onClear, compact, search, onClearSearch,
-}: FilteredSectionProps) {
+function FilteredSection({ filter, leads, today, onClear, compact, search, onClearSearch }: FilteredSectionProps) {
+  const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
+  const wonLeads    = leads.filter(l => l.status === "Won");
+  const lostLeads   = leads.filter(l => l.status === "Lost");
+
   let baseLeads: Lead[];
   let title: string;
-  let badgeCount: number | null = null;
+  let showBadge = false;
 
   switch (filter) {
-    case "today":
-      baseLeads = todayLeads;
-      title = "Due Today";
-      break;
-    case "overdue":
-      baseLeads = overdueLeads;
-      title = "Overdue";
+    case "all":
+      baseLeads = [...leads].sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+      title = "All Leads";
       break;
     case "open":
       baseLeads = activeLeads.slice().sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
-      title = "All Open Leads";
+      title = "Open Leads";
       break;
     case "won":
       baseLeads = wonLeads;
-      title = "Won Leads";
+      title = "Won Customers";
+      break;
+    case "closed":
+      baseLeads = [...wonLeads, ...lostLeads].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      title = "Closed Leads";
+      break;
+    case "today":
+      baseLeads = activeLeads.filter(l => l.followUpDate === today);
+      title = "Due Today";
+      showBadge = true;
+      break;
+    case "overdue":
+      baseLeads = activeLeads.filter(l => l.followUpDate < today)
+        .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+      title = "Overdue";
+      showBadge = true;
+      break;
+    case "snoozed":
+      baseLeads = activeLeads.filter(l => l.followUpDate > today)
+        .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+      title = "Snoozed";
+      break;
+    case "new":
+      baseLeads = leads.filter(l => l.status === "New")
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      title = "New Leads";
       break;
     default: {
-      const actionRequired = [...overdueLeads, ...todayLeads].sort((a, b) =>
-        a.followUpDate.localeCompare(b.followUpDate)
-      );
-      baseLeads = actionRequired;
-      title = overdueLeads.length > 0 ? "Overdue + Today's Follow Ups" : "Today's Follow Ups";
-      badgeCount = actionRequired.length > 0 ? actionRequired.length : null;
+      const overdue = activeLeads.filter(l => l.followUpDate < today)
+        .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+      const todayLeads = activeLeads.filter(l => l.followUpDate === today);
+      baseLeads = [...overdue, ...todayLeads];
+      title = overdue.length > 0 ? "Overdue + Due Today" : "Due Today";
+      showBadge = baseLeads.length > 0;
       break;
     }
   }
 
   const isSearchActive = search.trim().length > 0;
-  const displayLeads = isSearchActive
-    ? baseLeads.filter(l => matchesSearch(l, search.trim()))
-    : baseLeads;
+  const displayLeads = isSearchActive ? baseLeads.filter(l => matchesSearch(l, search.trim())) : baseLeads;
 
   const emptyMessages: Record<string, string> = {
-    today: "No leads due today.",
-    overdue: "No overdue leads. Nice work.",
-    open: "No open leads.",
-    won: "No won leads yet.",
+    all:     "No leads yet.",
+    open:    "No open leads.",
+    won:     "No won leads yet.",
+    closed:  "No closed leads yet.",
+    today:   "No leads due today.",
+    overdue: "No overdue leads — great work!",
+    snoozed: "No snoozed leads.",
+    new:     "No new leads.",
     default: "All caught up. No leads need follow-up today.",
   };
   const emptyMsg = emptyMessages[filter ?? "default"] ?? emptyMessages.default;
@@ -157,29 +171,32 @@ function FilteredSection({
   return (
     <div className="space-y-4" data-walkthrough="lead-list">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+        <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2.5">
           {title}
-          {badgeCount !== null && !isSearchActive && (
-            <span className="inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5">
-              {badgeCount}
+          {showBadge && !isSearchActive && baseLeads.length > 0 && (
+            <span className="inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5 shrink-0">
+              {baseLeads.length}
             </span>
           )}
           {(filter !== null || isSearchActive) && (
-            <span className="text-sm font-normal text-muted-foreground">({displayLeads.length})</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              ({displayLeads.length})
+            </span>
           )}
         </h2>
         <div className="flex items-center gap-3">
           {filter !== null && (
             <button
+              type="button"
               onClick={onClear}
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
-              Show all
+              Clear filter
             </button>
           )}
           <Link href="/leads">
-            <span className="text-sm text-primary hover:underline cursor-pointer">All leads</span>
+            <span className="text-sm text-primary hover:underline cursor-pointer">All leads →</span>
           </Link>
         </div>
       </div>
@@ -216,6 +233,8 @@ function FilteredSection({
   );
 }
 
+// ─── Main Dashboard ─────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const { leads, isLoaded } = useLeads();
   const { getToday, devModeEnabled, testDate } = useDevDate();
@@ -225,49 +244,33 @@ export default function Dashboard() {
   const searchStr = useSearch();
   const [, navigate] = useLocation();
 
-  const isDemo = new URLSearchParams(searchStr).get("demo") === "true";
+  const isDemo      = new URLSearchParams(searchStr).get("demo") === "true";
   const isWalkthrough = new URLSearchParams(searchStr).get("walkthrough") === "true";
 
   if (!isLoaded) return null;
 
-  const today = getToday();
-  const compact = density === "compact";
+  const today       = getToday();
+  const compact     = density === "compact";
+
   const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
-  const wonLeads = leads.filter(l => l.status === "Won");
-  const lostLeads = leads.filter(l => l.status === "Lost");
-  const todayLeads = activeLeads.filter(l => l.followUpDate === today);
+  const wonLeads    = leads.filter(l => l.status === "Won");
+  const lostLeads   = leads.filter(l => l.status === "Lost");
+  const todayLeads  = activeLeads.filter(l => l.followUpDate === today);
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
-  const isSearchActive = search.trim().length > 0;
+  const snoozedLeads = activeLeads.filter(l => l.followUpDate > today);
+  const newLeads    = leads.filter(l => l.status === "New");
 
   const closedCount = wonLeads.length + lostLeads.length;
   const conversionRate = closedCount > 0
     ? `${Math.round((wonLeads.length / closedCount) * 100)}%`
     : "—";
 
-  const summaryMetrics: StatMetric[] = [
-    {
-      label: "Total Leads",
-      value: leads.length,
-    },
-    {
-      label: "Follow-Ups Due Today",
-      value: todayLeads.length,
-      valueClass: todayLeads.length > 0 ? "text-amber-600" : "text-foreground",
-    },
-    {
-      label: "Won Customers",
-      value: wonLeads.length,
-      valueClass: "text-emerald-600",
-    },
-    {
-      label: "Conversion Rate",
-      value: conversionRate,
-      sub: closedCount > 0 ? `${wonLeads.length} won of ${closedCount} closed` : "No closed leads yet",
-      valueClass: wonLeads.length > 0 ? "text-emerald-600" : "text-foreground",
-    },
-  ];
+  function handleFilterClick(key: DashFilter) {
+    setActiveFilter(key);
+    setSearch("");
+  }
 
-  // Fully empty state — show a friendly CTA instead of the dashboard grid
+  // Empty state
   if (leads.length === 0) {
     return (
       <>
@@ -280,10 +283,7 @@ export default function Dashboard() {
                 Add your first lead to start tracking follow-ups.
               </p>
               <Link href="/leads/new">
-                <button
-                  type="button"
-                  className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer touch-manipulation"
-                >
+                <button type="button" className="mt-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-5 py-2.5 text-sm transition-colors cursor-pointer touch-manipulation">
                   Add your first lead
                 </button>
               </Link>
@@ -299,14 +299,15 @@ export default function Dashboard() {
   return (
     <>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <div className="flex items-center gap-3 flex-wrap">
             {devModeEnabled && (
               <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                <span className="font-semibold">Time Travel active</span>
-                <span className="text-amber-600">—</span>
-                <span>Showing as of <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span></span>
+                <span className="font-semibold">Time Travel</span>
+                <span className="text-amber-500">·</span>
+                <span className="font-mono font-semibold">{format(parseISO(testDate), "MMM d, yyyy")}</span>
               </div>
             )}
             <ViewToggle density={density} setDensity={setDensity} />
@@ -315,59 +316,115 @@ export default function Dashboard() {
 
         <DemoBanner />
 
-        <SummaryStats metrics={summaryMetrics} />
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-walkthrough="stat-cards">
-          <StatCard
-            label="Due Today"
-            value={todayLeads.length}
-            filterKey="today"
-            activeFilter={activeFilter}
-            onClick={setActiveFilter}
-            activeClass="ring-2 ring-primary bg-primary/5"
-          />
-          <StatCard
-            label="Overdue"
-            value={overdueLeads.length}
-            filterKey="overdue"
-            activeFilter={activeFilter}
-            onClick={setActiveFilter}
-            labelColor="text-destructive"
-            valueColor="text-destructive"
-            borderClass={overdueLeads.length > 0 ? "border-destructive/30" : ""}
-            activeClass="ring-2 ring-destructive bg-destructive/5"
-          />
-          <StatCard
-            label="Total Open"
-            value={activeLeads.length}
-            filterKey="open"
-            activeFilter={activeFilter}
-            onClick={setActiveFilter}
-            activeClass="ring-2 ring-primary bg-primary/5"
-          />
-          <StatCard
-            label="Won"
-            value={wonLeads.length}
-            filterKey="won"
-            activeFilter={activeFilter}
-            onClick={setActiveFilter}
-            labelColor="text-emerald-600"
-            valueColor="text-emerald-600"
-            activeClass="ring-2 ring-emerald-600 bg-emerald-50"
-          />
+        {/* Row 1 — Business Metrics */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2.5 px-0.5">
+            Business Metrics
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-walkthrough="stat-cards">
+            <FilterCard
+              label="Total Leads"
+              value={leads.length}
+              filterKey="all"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+            />
+            <FilterCard
+              label="Open Leads"
+              value={activeLeads.length}
+              filterKey="open"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+            />
+            <FilterCard
+              label="Won Customers"
+              value={wonLeads.length}
+              filterKey="won"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+              valueCls="text-emerald-600"
+              labelCls="text-emerald-700/70"
+              activeBg="bg-emerald-50"
+              activeBorder="border-emerald-500/50"
+              activeRing="ring-emerald-400/40"
+            />
+            <FilterCard
+              label="Conversion Rate"
+              value={conversionRate}
+              sub={closedCount > 0 ? `${wonLeads.length} of ${closedCount} closed` : undefined}
+              filterKey="closed"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+              valueCls={wonLeads.length > 0 ? "text-emerald-600" : "text-foreground"}
+            />
+          </div>
         </div>
 
-        {/* Search bar — always visible, above lead list */}
+        {/* Row 2 — Action Filters */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2.5 px-0.5">
+            Action Filters
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <FilterCard
+              label="Due Today"
+              value={todayLeads.length}
+              filterKey="today"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+              valueCls={todayLeads.length > 0 ? "text-amber-600" : "text-foreground"}
+              labelCls={todayLeads.length > 0 ? "text-amber-600/80" : "text-muted-foreground"}
+              activeBg="bg-amber-50"
+              activeBorder="border-amber-400/50"
+              activeRing="ring-amber-400/40"
+            />
+            <FilterCard
+              label="Overdue"
+              value={overdueLeads.length}
+              filterKey="overdue"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+              valueCls={overdueLeads.length > 0 ? "text-red-600" : "text-foreground"}
+              labelCls={overdueLeads.length > 0 ? "text-red-600/80" : "text-muted-foreground"}
+              activeBg="bg-red-50"
+              activeBorder="border-red-400/50"
+              activeRing="ring-red-400/40"
+              urgentBorder={overdueLeads.length > 0}
+            />
+            <FilterCard
+              label="Snoozed"
+              value={snoozedLeads.length}
+              sub="Future follow-ups"
+              filterKey="snoozed"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+            />
+            <FilterCard
+              label="New Leads"
+              value={newLeads.length}
+              filterKey="new"
+              activeFilter={activeFilter}
+              onClick={handleFilterClick}
+              valueCls={newLeads.length > 0 ? "text-blue-600" : "text-foreground"}
+              labelCls={newLeads.length > 0 ? "text-blue-600/80" : "text-muted-foreground"}
+              activeBg="bg-blue-50"
+              activeBorder="border-blue-400/50"
+              activeRing="ring-blue-400/40"
+            />
+          </div>
+        </div>
+
+        {/* Search */}
         <div className="relative" data-walkthrough="dashboard-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); if (e.target.value) setActiveFilter(null); }}
             placeholder="Search by name, phone, or service…"
             className="w-full rounded-lg border bg-card pl-9 pr-9 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
           />
-          {isSearchActive && (
+          {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
@@ -382,10 +439,7 @@ export default function Dashboard() {
         <FilteredSection
           filter={activeFilter}
           leads={leads}
-          todayLeads={todayLeads}
-          overdueLeads={overdueLeads}
-          activeLeads={activeLeads}
-          wonLeads={wonLeads}
+          today={today}
           onClear={() => setActiveFilter(null)}
           compact={compact}
           search={search}
@@ -399,14 +453,19 @@ export default function Dashboard() {
   );
 }
 
-function ViewToggle({ density, setDensity }: { density: "comfortable" | "compact"; setDensity: (d: "comfortable" | "compact") => void }) {
+function ViewToggle({
+  density,
+  setDensity,
+}: {
+  density: "comfortable" | "compact";
+  setDensity: (d: "comfortable" | "compact") => void;
+}) {
   return (
     <div className="hidden sm:flex items-center rounded-lg border bg-card shadow-sm p-0.5 gap-0.5">
       <button
         type="button"
         onClick={() => setDensity("comfortable")}
         className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${density === "comfortable" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-        title="Comfortable view"
       >
         <AlignJustify className="h-3.5 w-3.5" />
         Comfortable
@@ -415,7 +474,6 @@ function ViewToggle({ density, setDensity }: { density: "comfortable" | "compact
         type="button"
         onClick={() => setDensity("compact")}
         className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${density === "compact" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-        title="Compact view"
       >
         <LayoutList className="h-3.5 w-3.5" />
         Compact
