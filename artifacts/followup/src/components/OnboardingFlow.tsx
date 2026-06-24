@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, ChevronLeft, X, Sparkles, Plus } from "lucide-react";
+import { ChevronRight, ChevronLeft, X, Wrench, Sparkles, Scissors, Car, Home, Layers, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeads } from "@/hooks/useLeads";
 import { Lead } from "@/contexts/LeadsContext";
@@ -9,13 +9,13 @@ import { addDaysToDate, getTodayDateString } from "@/lib/leadUtils";
 type BusinessType = "Auto Repair" | "Cleaning Service" | "Barber / Salon" | "Driving School" | "Home Services" | "Other";
 type FlowStep = 1 | 2 | 3;
 
-const BUSINESS_TYPES: { label: BusinessType; emoji: string }[] = [
-  { label: "Auto Repair", emoji: "🔧" },
-  { label: "Cleaning Service", emoji: "🧹" },
-  { label: "Barber / Salon", emoji: "✂️" },
-  { label: "Driving School", emoji: "🚗" },
-  { label: "Home Services", emoji: "🏠" },
-  { label: "Other", emoji: "⚡" },
+const BUSINESS_TYPES: { label: BusinessType; icon: LucideIcon; description: string }[] = [
+  { label: "Auto Repair",      icon: Wrench,   description: "Track estimates, declined work, and customer callbacks." },
+  { label: "Cleaning Service", icon: Sparkles, description: "Stay on top of quotes and follow-up visits." },
+  { label: "Barber / Salon",   icon: Scissors, description: "Track inquiries, appointments, and repeat customers." },
+  { label: "Driving School",   icon: Car,      description: "Manage lesson inquiries and package follow-ups." },
+  { label: "Home Services",    icon: Home,     description: "Track estimates and customer communication." },
+  { label: "Other",            icon: Layers,   description: "Flexible lead tracking for any service business." },
 ];
 
 function makeSampleLeads(): Lead[] {
@@ -237,7 +237,7 @@ export function OnboardingFlow() {
   if (step === 2) {
     return (
       <div className="min-h-screen bg-white flex flex-col px-5 py-6 safe-top">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-5">
           <button
             type="button"
             onClick={() => setStep(1)}
@@ -258,36 +258,50 @@ export function OnboardingFlow() {
         </div>
 
         <div className="flex-1 flex flex-col max-w-sm mx-auto w-full">
-          <div className="mb-6 space-y-4">
+          <div className="mb-5 space-y-3">
             <ProgressDots step={2} total={3} />
-            <div className="space-y-1">
-              <h2 className="text-xl font-bold text-foreground">What type of business do you run?</h2>
-              <p className="text-sm text-muted-foreground">We'll tailor the experience for you.</p>
+            <div className="space-y-0.5">
+              <h1 className="text-xl font-bold text-foreground">Welcome to FollowUp</h1>
+              <p className="text-sm text-muted-foreground">Let's customize your workspace.</p>
             </div>
+            <p className="text-sm font-semibold text-foreground pt-1">What type of business do you run?</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 flex-1">
-            {BUSINESS_TYPES.map(({ label, emoji }) => {
+          <div className="grid grid-cols-2 gap-2.5">
+            {BUSINESS_TYPES.map(({ label, icon: Icon, description }) => {
               const selected = businessType === label;
               return (
                 <button
                   key={label}
                   type="button"
                   onClick={() => setBusinessType(label)}
-                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 px-4 py-5 text-center transition-all cursor-pointer touch-manipulation ${
+                  className={[
+                    "group flex flex-col gap-2 rounded-xl border-2 px-3.5 py-3.5 text-left",
+                    "transition-all duration-150 cursor-pointer touch-manipulation",
                     selected
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-900"
-                      : "border-border bg-card text-foreground hover:border-emerald-300 hover:bg-emerald-50/50"
-                  }`}
+                      ? "border-emerald-600 bg-emerald-50 shadow-sm ring-1 ring-emerald-600/20"
+                      : "border-border bg-card hover:border-emerald-400 hover:bg-emerald-50/50 hover:-translate-y-0.5 hover:shadow-sm",
+                  ].join(" ")}
                 >
-                  <span className="text-2xl select-none">{emoji}</span>
-                  <span className="text-sm font-semibold leading-tight">{label}</span>
+                  <div className="flex items-center gap-2">
+                    <Icon
+                      className={`h-4 w-4 shrink-0 transition-colors ${
+                        selected ? "text-emerald-600" : "text-muted-foreground group-hover:text-emerald-500"
+                      }`}
+                    />
+                    <span className={`text-sm font-semibold leading-tight ${selected ? "text-emerald-900" : "text-foreground"}`}>
+                      {label}
+                    </span>
+                  </div>
+                  <p className={`text-xs leading-relaxed ${selected ? "text-emerald-800/70" : "text-muted-foreground"}`}>
+                    {description}
+                  </p>
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-5">
             <button
               type="button"
               onClick={() => setStep(3)}
