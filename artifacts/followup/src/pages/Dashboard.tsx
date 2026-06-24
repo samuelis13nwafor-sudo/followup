@@ -8,6 +8,7 @@ import { useDevDate } from "@/contexts/DevDateContext";
 import { useView } from "@/contexts/ViewContext";
 import { X, AlignJustify, LayoutList, Search } from "lucide-react";
 import { WalkthroughOverlay } from "@/components/WalkthroughOverlay";
+import { OnboardingWalkthrough } from "@/components/OnboardingWalkthrough";
 
 type DashFilter = "today" | "overdue" | "open" | "won" | null;
 
@@ -199,6 +200,7 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
 
   const isDemo = new URLSearchParams(searchStr).get("demo") === "true";
+  const isWalkthrough = new URLSearchParams(searchStr).get("walkthrough") === "true";
 
   if (!isLoaded) return null;
 
@@ -234,6 +236,7 @@ export default function Dashboard() {
           </Card>
         </div>
         {isDemo && <WalkthroughOverlay onFinish={() => navigate("/dashboard")} />}
+        {isWalkthrough && <OnboardingWalkthrough onFinish={() => navigate("/dashboard")} />}
       </>
     );
   }
@@ -296,7 +299,7 @@ export default function Dashboard() {
         </div>
 
         {/* Search bar — always visible, above lead list */}
-        <div className="relative">
+        <div className="relative" data-walkthrough="dashboard-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="search"
@@ -331,9 +334,8 @@ export default function Dashboard() {
         />
       </div>
 
-      {isDemo && (
-        <WalkthroughOverlay onFinish={() => navigate("/dashboard")} />
-      )}
+      {isDemo && <WalkthroughOverlay onFinish={() => navigate("/dashboard")} />}
+      {isWalkthrough && <OnboardingWalkthrough onFinish={() => navigate("/dashboard")} />}
     </>
   );
 }

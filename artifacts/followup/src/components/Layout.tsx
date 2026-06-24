@@ -261,7 +261,7 @@ import { Link, useLocation } from "wouter";
           );
         })}
         <Link href="/leads/new" onClick={onNav}>
-          <div className="mt-4 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white bg-emerald-700 hover:bg-emerald-800 cursor-pointer">
+          <div data-walkthrough="sidebar-add-lead" className="mt-4 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-white bg-emerald-700 hover:bg-emerald-800 cursor-pointer">
             <PlusCircle className="h-4 w-4" />
             Add Lead
           </div>
@@ -293,7 +293,7 @@ import { Link, useLocation } from "wouter";
           <header className="flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 md:hidden">
+                <Button data-walkthrough="mobile-menu-btn" variant="ghost" size="icon" className="shrink-0 md:hidden">
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Toggle navigation menu</span>
                 </Button>
