@@ -52,20 +52,25 @@ function FilterCard({
       aria-pressed={isActive}
       className={[
         "group rounded-xl border bg-card text-left shadow-sm w-full",
+        "h-[88px] flex flex-col justify-between",
         "transition-all duration-150 cursor-pointer touch-manipulation",
         "hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         urgentBorder && !isActive ? "border-red-200" : "",
-        isActive ? `${activeBg} border-2 ${activeBorder} ring-1 ${activeRing} shadow-none translate-y-0` : "hover:border-slate-300",
+        isActive
+          ? `${activeBg} border-2 ${activeBorder} ring-1 ${activeRing} shadow-none translate-y-0`
+          : "hover:border-slate-300",
       ].filter(Boolean).join(" ")}
     >
-      <div className="px-4 pt-4 pb-1">
-        <p className={`text-xs font-semibold uppercase tracking-wide leading-none ${isActive ? "opacity-80" : labelCls}`}>{label}</p>
+      <div className="px-4 pt-4">
+        <p className={`text-xs font-semibold uppercase tracking-wide leading-none ${isActive ? "opacity-80" : labelCls}`}>
+          {label}
+        </p>
       </div>
-      <div className="px-4 pb-3.5 flex items-end justify-between gap-2">
+      <div className="px-4 pb-4 flex items-end justify-between gap-2">
         <p className={`text-2xl font-bold tracking-tight leading-none ${valueCls}`}>{value}</p>
         {sub && (
-          <p className="text-[10px] text-muted-foreground leading-tight pb-0.5 text-right max-w-[80px]">{sub}</p>
+          <p className="text-[10px] text-muted-foreground leading-tight text-right max-w-[88px]">{sub}</p>
         )}
       </div>
     </button>
@@ -252,18 +257,17 @@ export default function Dashboard() {
   const today       = getToday();
   const compact     = density === "compact";
 
-  const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
-  const wonLeads    = leads.filter(l => l.status === "Won");
-  const lostLeads   = leads.filter(l => l.status === "Lost");
-  const todayLeads  = activeLeads.filter(l => l.followUpDate === today);
+  const activeLeads  = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
+  const wonLeads     = leads.filter(l => l.status === "Won");
+  const todayLeads   = activeLeads.filter(l => l.followUpDate === today);
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
   const snoozedLeads = activeLeads.filter(l => l.followUpDate > today);
-  const newLeads    = leads.filter(l => l.status === "New");
+  const newLeads     = leads.filter(l => l.status === "New");
 
-  const closedCount = wonLeads.length + lostLeads.length;
-  const conversionRate = closedCount > 0
-    ? `${Math.round((wonLeads.length / closedCount) * 100)}%`
-    : "—";
+  const conversionRate = leads.length > 0
+    ? `${Math.round((wonLeads.length / leads.length) * 100)}%`
+    : "0%";
+  const conversionRateSub = `${wonLeads.length} won of ${leads.length} lead${leads.length !== 1 ? "s" : ""}`;
 
   function handleFilterClick(key: DashFilter) {
     setActiveFilter(key);
@@ -351,7 +355,7 @@ export default function Dashboard() {
             <FilterCard
               label="Conversion Rate"
               value={conversionRate}
-              sub={closedCount > 0 ? `${wonLeads.length} of ${closedCount} closed` : undefined}
+              sub={conversionRateSub}
               filterKey="closed"
               activeFilter={activeFilter}
               onClick={handleFilterClick}
@@ -394,7 +398,6 @@ export default function Dashboard() {
             <FilterCard
               label="Snoozed"
               value={snoozedLeads.length}
-              sub="Future follow-ups"
               filterKey="snoozed"
               activeFilter={activeFilter}
               onClick={handleFilterClick}
