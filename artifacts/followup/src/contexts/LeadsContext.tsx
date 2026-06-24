@@ -25,6 +25,7 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
   activity: ActivityEntry[];
+  is_demo?: boolean;
 }
 
 interface LeadsContextValue {
@@ -36,6 +37,7 @@ interface LeadsContextValue {
   deleteLead: (id: string) => void;
   getLead: (id: string) => Lead | undefined;
   replaceAllLeads: (newLeads: Lead[]) => void;
+  clearDemoLeads: () => void;
 }
 
 const LeadsContext = createContext<LeadsContextValue | null>(null);
@@ -158,8 +160,16 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
     setLeads(newLeads);
   }, []);
 
+  const clearDemoLeads = useCallback(() => {
+    setLeads((prev) => {
+      const updated = prev.filter((l) => !l.is_demo);
+      localStorage.setItem(storageKeyRef.current, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <LeadsContext.Provider value={{ leads, isLoaded, storageKey, addLead, updateLead, deleteLead, getLead, replaceAllLeads }}>
+    <LeadsContext.Provider value={{ leads, isLoaded, storageKey, addLead, updateLead, deleteLead, getLead, replaceAllLeads, clearDemoLeads }}>
       {children}
     </LeadsContext.Provider>
   );

@@ -38,10 +38,11 @@ function makeSampleLeads(): Lead[] {
       source: "Walk-in",
       notes: "Dropped in yesterday asking about front and rear pads on a 2019 Honda Civic. Said he needs it done this week.",
       followUpDate: addDaysToDate(today, -2),
-      status: "New",
+      status: "New" as const,
       createdAt: daysAgoISO(3),
       updatedAt: daysAgoISO(3),
       activity: [entry("Lead created", 3)],
+      is_demo: true,
     },
     {
       id: crypto.randomUUID(),
@@ -51,10 +52,11 @@ function makeSampleLeads(): Lead[] {
       source: "Referral",
       notes: "Referred by the Patel family. Needs a quote before end of week.",
       followUpDate: today,
-      status: "New",
+      status: "New" as const,
       createdAt: daysAgoISO(1),
       updatedAt: daysAgoISO(1),
       activity: [entry("Lead created", 1)],
+      is_demo: true,
     },
     {
       id: crypto.randomUUID(),
@@ -64,13 +66,14 @@ function makeSampleLeads(): Lead[] {
       source: "Online",
       notes: "Enquired online. Spoke on the phone — very keen. Wants to start next week.",
       followUpDate: addDaysToDate(today, 2),
-      status: "Contacted",
+      status: "Contacted" as const,
       createdAt: daysAgoISO(4),
       updatedAt: daysAgoISO(2),
       activity: [
         entry("Lead created", 4),
         entry("Status changed to Contacted", 2),
       ],
+      is_demo: true,
     },
     {
       id: crypto.randomUUID(),
@@ -80,7 +83,7 @@ function makeSampleLeads(): Lead[] {
       source: "Phone call",
       notes: "Sent a quote for £120. Waiting to hear back — she said she'd decide by Thursday.",
       followUpDate: addDaysToDate(today, 3),
-      status: "Quote Sent",
+      status: "Quote Sent" as const,
       createdAt: daysAgoISO(6),
       updatedAt: daysAgoISO(1),
       activity: [
@@ -88,6 +91,7 @@ function makeSampleLeads(): Lead[] {
         entry("Status changed to Contacted", 4),
         entry("Status changed to Quote Sent", 1),
       ],
+      is_demo: true,
     },
     {
       id: crypto.randomUUID(),
@@ -97,7 +101,7 @@ function makeSampleLeads(): Lead[] {
       source: "Referral",
       notes: "Booked in and paid. Regular customer — check in next month.",
       followUpDate: addDaysToDate(today, 30),
-      status: "Won",
+      status: "Won" as const,
       createdAt: daysAgoISO(10),
       updatedAt: daysAgoISO(3),
       activity: [
@@ -106,6 +110,7 @@ function makeSampleLeads(): Lead[] {
         entry("Status changed to Quote Sent", 6),
         entry("Status changed to Won", 3),
       ],
+      is_demo: true,
     },
   ];
 }

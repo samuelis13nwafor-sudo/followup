@@ -9,6 +9,7 @@ import { useView } from "@/contexts/ViewContext";
 import { X, AlignJustify, LayoutList, Search } from "lucide-react";
 import { WalkthroughOverlay } from "@/components/WalkthroughOverlay";
 import { OnboardingWalkthrough } from "@/components/OnboardingWalkthrough";
+import { DemoBanner } from "@/components/DemoBanner";
 
 type DashFilter = "today" | "overdue" | "open" | "won" | null;
 
@@ -257,6 +258,8 @@ export default function Dashboard() {
             <ViewToggle density={density} setDensity={setDensity} />
           </div>
         </div>
+
+        <DemoBanner />
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-walkthrough="stat-cards">
           <StatCard
