@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
     LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2,
     RotateCcw, UserX, TestTubeDiagonal, LogOut, User,
   } from "lucide-react";
+  import { NotificationBell } from "@/components/NotificationBell";
   import { Button } from "@/components/ui/button";
   import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
   import { useState } from "react";
@@ -273,11 +274,14 @@ import { Link, useLocation } from "wouter";
       <div className="flex min-h-screen w-full bg-muted/30">
         {/* Desktop sidebar */}
         <aside className={`hidden w-64 flex-col border-r bg-sidebar md:flex transition-colors ${devModeEnabled ? "border-amber-200" : ""}`}>
-          <div className="flex h-14 items-center border-b px-6 font-semibold text-lg text-sidebar-foreground shrink-0">
-            FollowUp
-            {devModeEnabled && (
-              <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-300">DEV</span>
-            )}
+          <div className="flex h-14 items-center border-b px-6 font-semibold text-lg text-sidebar-foreground shrink-0 gap-2">
+            <span className="flex-1 flex items-center gap-2">
+              FollowUp
+              {devModeEnabled && (
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-300">DEV</span>
+              )}
+            </span>
+            <NotificationBell />
           </div>
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
             <NavLinks />
@@ -314,12 +318,13 @@ import { Link, useLocation } from "wouter";
                 </div>
               </SheetContent>
             </Sheet>
-            <div className="font-semibold text-lg flex items-center gap-2">
+            <div className="font-semibold text-lg flex items-center gap-2 flex-1">
               FollowUp
               {devModeEnabled && (
                 <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-300">DEV</span>
               )}
             </div>
+            <NotificationBell />
           </header>
 
           {/* Demo Mode banner */}

@@ -13,6 +13,31 @@ import { DemoBanner } from "@/components/DemoBanner";
 
 type DashFilter = "today" | "overdue" | "open" | "won" | null;
 
+// ─── Summary Stats ─────────────────────────────────────────────────────────────
+
+interface StatMetric {
+  label: string;
+  value: string | number;
+  sub?: string;
+  valueClass?: string;
+}
+
+function SummaryStats({ metrics }: { metrics: StatMetric[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {metrics.map(({ label, value, sub, valueClass }) => (
+        <div key={label} className="rounded-xl border bg-card px-4 py-3.5 space-y-0.5 shadow-sm">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
+          <p className={`text-2xl font-bold tracking-tight ${valueClass ?? "text-foreground"}`}>{value}</p>
+          {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Filter stat cards ──────────────────────────────────────────────────────────
+
 interface StatCardProps {
   label: string;
   value: number;
@@ -209,9 +234,38 @@ export default function Dashboard() {
   const compact = density === "compact";
   const activeLeads = leads.filter(l => l.status !== "Won" && l.status !== "Lost");
   const wonLeads = leads.filter(l => l.status === "Won");
+  const lostLeads = leads.filter(l => l.status === "Lost");
   const todayLeads = activeLeads.filter(l => l.followUpDate === today);
   const overdueLeads = activeLeads.filter(l => l.followUpDate < today);
   const isSearchActive = search.trim().length > 0;
+
+  const closedCount = wonLeads.length + lostLeads.length;
+  const conversionRate = closedCount > 0
+    ? `${Math.round((wonLeads.length / closedCount) * 100)}%`
+    : "—";
+
+  const summaryMetrics: StatMetric[] = [
+    {
+      label: "Total Leads",
+      value: leads.length,
+    },
+    {
+      label: "Follow-Ups Due Today",
+      value: todayLeads.length,
+      valueClass: todayLeads.length > 0 ? "text-amber-600" : "text-foreground",
+    },
+    {
+      label: "Won Customers",
+      value: wonLeads.length,
+      valueClass: "text-emerald-600",
+    },
+    {
+      label: "Conversion Rate",
+      value: conversionRate,
+      sub: closedCount > 0 ? `${wonLeads.length} won of ${closedCount} closed` : "No closed leads yet",
+      valueClass: wonLeads.length > 0 ? "text-emerald-600" : "text-foreground",
+    },
+  ];
 
   // Fully empty state — show a friendly CTA instead of the dashboard grid
   if (leads.length === 0) {
@@ -260,6 +314,8 @@ export default function Dashboard() {
         </div>
 
         <DemoBanner />
+
+        <SummaryStats metrics={summaryMetrics} />
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-walkthrough="stat-cards">
           <StatCard
@@ -345,7 +401,6 @@ export default function Dashboard() {
 
 function ViewToggle({ density, setDensity }: { density: "comfortable" | "compact"; setDensity: (d: "comfortable" | "compact") => void }) {
   return (
-    // Hidden on mobile — compact mode is desktop/tablet only
     <div className="hidden sm:flex items-center rounded-lg border bg-card shadow-sm p-0.5 gap-0.5">
       <button
         type="button"
