@@ -32,7 +32,7 @@ const STEPS: Step[] = [
   {
     target: null,
     title: "You're all set!",
-    desc: "Your first lead is saved and you're ready to start following up. Never let a lead slip through the cracks again.",
+    desc: "You know your way around. Start following up and never let a lead slip through the cracks again.",
   },
 ];
 
