@@ -73,10 +73,26 @@ import { Link, useLocation } from "wouter";
               <div className="space-y-1.5 border-t border-amber-200 pt-3">
                 <p className="text-xs text-amber-700 font-medium">Auth Status</p>
                 <div className="rounded-md border border-amber-200 bg-white px-3 py-2 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-amber-700 shrink-0 font-medium">VITE_SUPABASE_URL</span>
+                    <span className={`font-mono text-xs truncate max-w-[150px] ${import.meta.env.VITE_SUPABASE_URL ? "text-emerald-600" : "text-red-500 font-bold"}`}>
+                      {import.meta.env.VITE_SUPABASE_URL
+                        ? import.meta.env.VITE_SUPABASE_URL.replace("https://","").slice(0,18) + "…"
+                        : "✗ missing"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-amber-700 shrink-0 font-medium">VITE_SUPABASE_ANON_KEY</span>
+                    <span className={`font-semibold ${import.meta.env.VITE_SUPABASE_ANON_KEY ? "text-emerald-600" : "text-red-500"}`}>
+                      {import.meta.env.VITE_SUPABASE_ANON_KEY
+                        ? `✓ set (${import.meta.env.VITE_SUPABASE_ANON_KEY.length} chars)`
+                        : "✗ missing"}
+                    </span>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-amber-700">Supabase configured</span>
                     <span className={`font-semibold ${supabaseConfigured ? "text-emerald-600" : "text-red-500"}`}>
-                      {supabaseConfigured ? "Yes" : "No"}
+                      {supabaseConfigured ? "✓ Yes" : "✗ No"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">

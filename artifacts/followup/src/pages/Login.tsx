@@ -53,6 +53,26 @@ import { useState } from "react";
           </div>
         )}
 
+        {/* TEMP: env var debug panel */}
+        <div className="w-full max-w-sm mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs space-y-1.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Env Config Check</p>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-500 shrink-0">VITE_SUPABASE_URL</span>
+            <span className={`font-semibold truncate max-w-[180px] ${import.meta.env.VITE_SUPABASE_URL ? "text-emerald-600" : "text-red-500"}`}>
+              {import.meta.env.VITE_SUPABASE_URL
+                ? "✓ " + String(import.meta.env.VITE_SUPABASE_URL).replace("https://","").slice(0,22) + "…"
+                : "✗ missing"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-500 shrink-0">VITE_SUPABASE_ANON_KEY</span>
+            <span className={`font-semibold ${import.meta.env.VITE_SUPABASE_ANON_KEY ? "text-emerald-600" : "text-red-500"}`}>
+              {import.meta.env.VITE_SUPABASE_ANON_KEY
+                ? `✓ set (${String(import.meta.env.VITE_SUPABASE_ANON_KEY).length} chars)`
+                : "✗ missing"}
+            </span>
+          </div>
+        </div>
         <Card className="w-full max-w-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl">Sign in</CardTitle>
