@@ -20,13 +20,7 @@ router.get("/push/vapid-public-key", (_req, res) => {
   res.json({ publicKey: vapidPublicKey });
 });
 
-const isDev = process.env.NODE_ENV !== "production";
-
 router.post("/push/send-test", async (req, res) => {
-  if (!isDev) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
   if (!vapidPublicKey || !vapidPrivateKey) {
     res.status(503).json({ error: "VAPID keys not configured." });
     return;
@@ -46,7 +40,7 @@ router.post("/push/send-test", async (req, res) => {
   const payload = JSON.stringify({
     title: "FollowUp reminder",
     body: "Test notification from FollowUp.",
-    url: "/",
+    url: "/dashboard",
   });
 
   try {

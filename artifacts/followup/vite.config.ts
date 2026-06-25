@@ -27,7 +27,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: "auto",
       devOptions: {
-        enabled: false,
+        enabled: true,
+        type: "module",
+        navigateFallback: "index.html",
       },
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],

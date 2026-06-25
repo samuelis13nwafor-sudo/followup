@@ -1,20 +1,20 @@
 import { Bell, BellOff, CheckCircle, Smartphone } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/contexts/AuthContext";
-
-const isDev = import.meta.env.DEV;
+import { useDevDate } from "@/contexts/DevDateContext";
 
 export function PushNotificationCard() {
   const { user } = useAuth();
+  const { devModeEnabled } = useDevDate();
   const { pushState, enable, dismiss, sendTest, isSending, sendResult } =
     usePushNotifications(user?.id);
 
-  // Never render if unsupported or snoozed or already subscribed (unless dev)
+  // Never render if unsupported or snoozed or already subscribed (unless dev mode on)
   if (pushState === "unsupported") return null;
   if (pushState === "dismissed") return null;
-  if (pushState === "subscribed" && !isDev) return null;
+  if (pushState === "subscribed" && !devModeEnabled) return null;
 
-  // ── Already subscribed (dev only) ────────────────────────────────────────
+  // ── Already subscribed — show test button when dev mode is on ────────────
   if (pushState === "subscribed") {
     return (
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center gap-3 shadow-sm">
@@ -26,15 +26,15 @@ export function PushNotificationCard() {
           type="button"
           onClick={() => void sendTest()}
           disabled={isSending}
-          className="rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 active:bg-emerald-100 text-emerald-800 font-semibold px-3 py-1.5 text-xs transition-colors cursor-pointer touch-manipulation whitespace-nowrap disabled:opacity-50"
+          className="rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 active:bg-emerald-100 text-emerald-800 font-semibold px-3.5 py-1.5 text-xs transition-colors cursor-pointer touch-manipulation whitespace-nowrap disabled:opacity-50"
         >
           {isSending ? "Sending…" : "Send Test Push"}
         </button>
         {sendResult === "ok" && (
-          <span className="text-xs text-emerald-700 font-medium">Sent ✓</span>
+          <span className="text-xs text-emerald-700 font-medium whitespace-nowrap">Sent ✓</span>
         )}
         {sendResult === "error" && (
-          <span className="text-xs text-red-600 font-medium">Failed</span>
+          <span className="text-xs text-red-600 font-medium whitespace-nowrap">Failed</span>
         )}
       </div>
     );

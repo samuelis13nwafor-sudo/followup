@@ -42,18 +42,26 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   const notifEvent = event as NotificationEvent;
   notifEvent.notification.close();
-  const url = (notifEvent.notification.data?.url as string | undefined) ?? "/";
+  const targetUrl = (notifEvent.notification.data?.url as string | undefined) ?? "/dashboard";
 
   notifEvent.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((list) => {
+        // Focus an existing window that is already on the target path
         for (const client of list) {
-          if ("focus" in client) {
+          const clientUrl = new URL((client as WindowClient).url);
+          if (clientUrl.pathname === targetUrl && "focus" in client) {
             return (client as WindowClient).focus();
           }
         }
-        return self.clients.openWindow(url);
+        // Focus any existing window and navigate it, or open a new one
+        if (list.length > 0 && "focus" in list[0]) {
+          return (list[0] as WindowClient).focus().then(() =>
+            (list[0] as WindowClient).navigate(targetUrl)
+          );
+        }
+        return self.clients.openWindow(targetUrl);
       })
   );
 });
