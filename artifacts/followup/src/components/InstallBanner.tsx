@@ -137,24 +137,27 @@ export function InstallBanner() {
     );
   }
 
-  // ── iOS Chrome ───────────────────────────────────────────────────────────
+  // ── iOS Chrome (or any non-Safari iOS browser) ───────────────────────────
   if (platform === "ios-chrome") {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 flex items-start gap-3 shadow-sm">
-        <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+        <div className="w-9 h-9 rounded-lg bg-slate-600 flex items-center justify-center shrink-0 mt-0.5">
           <Smartphone className="h-4.5 w-4.5 text-white" style={{ width: "1.125rem", height: "1.125rem" }} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-800 leading-snug">
-            Add FollowUp to your Home Screen
+            Install FollowUp on your iPhone
           </p>
-          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-            Open this page in <span className="font-semibold text-slate-700">Safari</span> to add FollowUp to your iPhone home screen.
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+            Open{" "}
+            <span className="font-semibold text-slate-700">usefollowup.ca</span>
+            {" "}in <span className="font-semibold text-slate-700">Safari</span> to install
+            FollowUp on your Home Screen.
           </p>
           <button
             type="button"
             onClick={dismiss}
-            className="mt-2 text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer touch-manipulation"
+            className="mt-2.5 text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer touch-manipulation"
           >
             Maybe later
           </button>
@@ -173,27 +176,30 @@ export function InstallBanner() {
 
   // ── iOS Safari ───────────────────────────────────────────────────────────
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 flex items-start gap-3 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 flex items-start gap-3 shadow-sm">
       <div className="w-9 h-9 rounded-lg bg-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
         <Share className="h-4.5 w-4.5 text-white" style={{ width: "1.125rem", height: "1.125rem" }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-emerald-900 leading-snug">
-          Add FollowUp to your Home Screen
+        <p className="text-sm font-semibold text-slate-800 leading-snug">
+          Install FollowUp on your iPhone
         </p>
-        <p className="text-xs text-emerald-800/70 mt-0.5 leading-relaxed">
-          Tap the{" "}
-          <span className="inline-flex items-baseline gap-0.5">
-            <Share className="h-3 w-3 relative top-px text-emerald-700" />
-            <span className="font-semibold text-emerald-800">Share</span>
-          </span>{" "}
-          button at the bottom of Safari, then tap{" "}
-          <span className="font-semibold text-emerald-800">Add to Home Screen</span>.
-        </p>
+        <ol className="mt-2 space-y-1 text-xs text-slate-600 leading-relaxed list-none">
+          <li><span className="font-semibold text-slate-500 mr-1.5">1.</span>Open this page in <span className="font-semibold text-slate-800">Safari</span>.</li>
+          <li>
+            <span className="font-semibold text-slate-500 mr-1.5">2.</span>Tap the{" "}
+            <span className="inline-flex items-baseline gap-0.5">
+              <Share className="h-3 w-3 relative top-px text-slate-600" />
+            </span>{" "}
+            <span className="font-semibold text-slate-800">Share</span> icon — the square with an arrow.
+          </li>
+          <li><span className="font-semibold text-slate-500 mr-1.5">3.</span>Tap <span className="font-semibold text-slate-800">Add to Home Screen</span>.</li>
+          <li><span className="font-semibold text-slate-500 mr-1.5">4.</span>Tap <span className="font-semibold text-slate-800">Add</span>.</li>
+        </ol>
         <button
           type="button"
           onClick={dismiss}
-          className="mt-2 text-xs text-emerald-700/60 hover:text-emerald-800 transition-colors cursor-pointer touch-manipulation"
+          className="mt-3 text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer touch-manipulation"
         >
           Maybe later
         </button>
@@ -202,7 +208,7 @@ export function InstallBanner() {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="shrink-0 rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-100 active:bg-emerald-200 transition-colors cursor-pointer touch-manipulation"
+        className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer touch-manipulation"
       >
         <X className="h-4 w-4" />
       </button>
