@@ -108,9 +108,11 @@ export function PushNotificationCard() {
     pushState,
     enable,
     dismiss,
+    resetSubscription,
     sendTest,
     isSending,
     sendResult,
+    sendError,
     enableStatus,
     enableError,
     diagInfo,
@@ -132,30 +134,48 @@ export function PushNotificationCard() {
     <div className="flex flex-col gap-2">
       {showMainCard && (
         <>
-          {/* ── Subscribed — test button visible in dev mode ─────────────── */}
+          {/* ── Subscribed — test button + error detail in dev mode ────────── */}
           {pushState === "subscribed" && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center gap-3 shadow-sm">
-              <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
-              <p className="flex-1 text-xs font-semibold text-emerald-800">
-                Push notifications enabled
-              </p>
-              <button
-                type="button"
-                onClick={() => void sendTest()}
-                disabled={isSending}
-                className="rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 active:bg-emerald-100 text-emerald-800 font-semibold px-3.5 py-1.5 text-xs transition-colors cursor-pointer touch-manipulation whitespace-nowrap disabled:opacity-50"
-              >
-                {isSending ? "Sending…" : "Send Test Push"}
-              </button>
-              {sendResult === "ok" && (
-                <span className="text-xs text-emerald-700 font-medium whitespace-nowrap">
-                  Sent ✓
-                </span>
-              )}
-              {sendResult === "error" && (
-                <span className="text-xs text-red-600 font-medium whitespace-nowrap">
-                  Failed
-                </span>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                <p className="flex-1 text-xs font-semibold text-emerald-800">
+                  Push notifications enabled
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void sendTest()}
+                  disabled={isSending}
+                  className="rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 active:bg-emerald-100 text-emerald-800 font-semibold px-3.5 py-1.5 text-xs transition-colors cursor-pointer touch-manipulation whitespace-nowrap disabled:opacity-50"
+                >
+                  {isSending ? "Sending…" : "Send Test Push"}
+                </button>
+                {sendResult === "ok" && (
+                  <span className="text-xs text-emerald-700 font-medium whitespace-nowrap">
+                    Sent ✓
+                  </span>
+                )}
+                {sendResult === "error" && (
+                  <span className="text-xs text-red-600 font-medium whitespace-nowrap">
+                    Failed
+                  </span>
+                )}
+              </div>
+
+              {/* Error detail + Re-enable button (dev mode only) */}
+              {sendResult === "error" && sendError && devModeEnabled && (
+                <div className="mt-2.5 ml-7 flex flex-col gap-2">
+                  <p className="text-xs text-red-700 leading-snug bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    {sendError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void resetSubscription()}
+                    className="self-start text-xs text-emerald-700 font-semibold hover:underline cursor-pointer touch-manipulation"
+                  >
+                    Re-enable notifications →
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -269,7 +289,7 @@ export function PushNotificationCard() {
         </>
       )}
 
-      {/* ── Dev-mode diagnostic panel (always shown when dev mode on) ──────── */}
+      {/* ── Dev-mode diagnostic panel ───────────────────────────────────────── */}
       {devModeEnabled && (
         <DiagPanel diagInfo={diagInfo} onRefresh={() => void refreshDiag()} />
       )}

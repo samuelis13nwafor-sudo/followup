@@ -23,7 +23,6 @@ async function safeJsonFetch(
   const res = await fetch(url, options);
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
-    // Endpoint returned HTML — likely a missing API route or routing misconfiguration
     devLog(`safeJsonFetch: ${url} returned non-JSON (${contentType})`);
     throw Object.assign(new Error("not-json"), {
       userMessage: "Push notifications are not configured yet.",
@@ -117,6 +116,7 @@ export function usePushNotifications(userId: string | null | undefined) {
   const [enableError, setEnableError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<"ok" | "error" | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [diagInfo, setDiagInfo] = useState<DiagInfo>(INITIAL_DIAG);
 
   const refreshDiag = useCallback(async (): Promise<void> => {
@@ -362,19 +362,58 @@ export function usePushNotifications(userId: string | null | undefined) {
     setPushState("dismissed");
   }, []);
 
+  /** Unsubscribe from push, clear stored state, and return to the idle card. */
+  const resetSubscription = useCallback(async (): Promise<void> => {
+    devLog("resetSubscription: unsubscribing…");
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+      }
+    } catch (err) {
+      devLog("resetSubscription: unsubscribe failed (non-fatal):", err);
+    }
+    localStorage.removeItem(ENABLED_KEY);
+    localStorage.removeItem(DISMISSED_KEY);
+    setSubscription(null);
+    setSendResult(null);
+    setSendError(null);
+    setEnableStatus("idle");
+    setEnableError(null);
+    setPushState("idle");
+    devLog("resetSubscription: done, state reset to idle");
+    void refreshDiag();
+  }, [refreshDiag]);
+
   const sendTest = useCallback(async (): Promise<void> => {
     if (!subscription) return;
     setIsSending(true);
     setSendResult(null);
+    setSendError(null);
     try {
       const res = await safeJsonFetch(SEND_TEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscription: subscription.toJSON() }),
       });
-      setSendResult(res.ok ? "ok" : "error");
-    } catch {
+      if (res.ok) {
+        setSendResult("ok");
+        devLog("sendTest: success");
+      } else {
+        const data = (await res.json()) as { error?: string; code?: string };
+        const msg = data.error ?? "Failed to deliver push notification.";
+        devLog("sendTest: server error:", data);
+        setSendResult("error");
+        setSendError(msg);
+      }
+    } catch (err) {
+      const msg =
+        (err as { userMessage?: string }).userMessage ??
+        (err instanceof Error ? err.message : "Send failed.");
+      devLog("sendTest: fetch failed:", err);
       setSendResult("error");
+      setSendError(msg);
     } finally {
       setIsSending(false);
     }
@@ -385,9 +424,11 @@ export function usePushNotifications(userId: string | null | undefined) {
     subscription,
     enable,
     dismiss,
+    resetSubscription,
     sendTest,
     isSending,
     sendResult,
+    sendError,
     enableStatus,
     enableError,
     diagInfo,

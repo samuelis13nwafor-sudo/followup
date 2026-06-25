@@ -22,8 +22,10 @@ router.get("/push/vapid-public-key", (_req, res) => {
 
 // /api/push/test — same handler, matches the Vercel function name
 router.post("/push/test", async (req, res) => {
+  const isDev = process.env.NODE_ENV !== "production";
+
   if (!vapidPublicKey || !vapidPrivateKey) {
-    res.status(503).json({ error: "VAPID keys not configured." });
+    res.status(503).json({ error: "VAPID keys not configured.", code: "vapid-missing" });
     return;
   }
 
@@ -31,10 +33,36 @@ router.post("/push/test", async (req, res) => {
 
   if (
     !subscription?.endpoint ||
-    !subscription?.keys?.p256dh ||
-    !subscription?.keys?.auth
+    typeof subscription?.keys?.p256dh !== "string" ||
+    typeof subscription?.keys?.auth !== "string"
   ) {
-    res.status(400).json({ error: "Invalid or missing push subscription." });
+    res.status(400).json({ error: "Invalid or missing push subscription.", code: "bad-subscription" });
+    return;
+  }
+
+  // Decode and validate key lengths before web-push does — gives a clearer error
+  const p256dhBytes = Buffer.from(subscription.keys.p256dh, "base64");
+  const authBytes = Buffer.from(subscription.keys.auth, "base64");
+
+  req.log.info({
+    endpoint: subscription.endpoint.slice(0, 60),
+    p256dhDecodedBytes: p256dhBytes.length,
+    p256dhRawChars: subscription.keys.p256dh.length,
+    authDecodedBytes: authBytes.length,
+  }, "Push test: subscription key details");
+
+  if (p256dhBytes.length !== 65) {
+    const detail =
+      `p256dh decodes to ${p256dhBytes.length} bytes (expected 65). ` +
+      `Raw string is ${subscription.keys.p256dh.length} chars. ` +
+      `This usually means the push subscription was created in a sandboxed or dev-mode context ` +
+      `that does not produce standard browser push keys. ` +
+      `Click "Re-enable" below to unsubscribe and create a fresh subscription.`;
+    req.log.error({ p256dhBytes: p256dhBytes.length }, "Invalid p256dh key length");
+    res.status(400).json({
+      error: isDev ? detail : "Invalid subscription key. Please re-enable notifications.",
+      code: "invalid-p256dh",
+    });
     return;
   }
 
@@ -48,8 +76,12 @@ router.post("/push/test", async (req, res) => {
     await webpush.sendNotification(subscription, payload);
     res.json({ ok: true });
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     req.log.error({ err }, "Failed to send test push notification");
-    res.status(500).json({ error: "Failed to deliver push notification." });
+    res.status(500).json({
+      error: isDev ? errMsg : "Failed to deliver push notification.",
+      code: "send-failed",
+    });
   }
 });
 
