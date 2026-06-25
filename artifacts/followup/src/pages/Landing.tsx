@@ -166,6 +166,113 @@ function ProductMockup() {
   );
 }
 
+function MobileProductMockup() {
+  return (
+    <div className="mx-auto" style={{ maxWidth: 320 }}>
+      {/* Phone frame */}
+      <div className="relative rounded-[2.25rem] border-[6px] border-slate-800 shadow-2xl bg-slate-800 overflow-hidden">
+        {/* Status bar */}
+        <div className="flex items-center justify-between px-5 pt-3 pb-1 bg-white">
+          <span className="text-[10px] font-semibold text-slate-700">9:41</span>
+          <div className="w-16 h-4 rounded-full bg-slate-800 mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
+          <div className="flex items-center gap-1">
+            <div className="flex gap-0.5 items-end">
+              <div className="w-0.5 h-1.5 bg-slate-700 rounded-sm" />
+              <div className="w-0.5 h-2 bg-slate-700 rounded-sm" />
+              <div className="w-0.5 h-2.5 bg-slate-700 rounded-sm" />
+              <div className="w-0.5 h-3 bg-slate-700 rounded-sm" />
+            </div>
+            <div className="w-5 h-2.5 rounded-sm border border-slate-700 relative ml-0.5">
+              <div className="absolute inset-[2px] right-auto w-3 bg-emerald-500 rounded-sm" />
+            </div>
+          </div>
+        </div>
+
+        {/* App content */}
+        <div className="bg-slate-50 pb-4">
+          {/* App header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
+            <span className="font-bold text-sm text-slate-800">FollowUp</span>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center">
+                <div className="w-2.5 h-2.5 rounded-full border border-slate-400" />
+              </div>
+              <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700">
+                JS
+              </div>
+            </div>
+          </div>
+
+          <div className="px-3 pt-3 space-y-3">
+            {/* Page title */}
+            <p className="text-sm font-bold text-slate-800">Dashboard</p>
+
+            {/* Stats grid — 2 columns readable on mobile */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Total Leads", value: "12", cls: "text-slate-800" },
+                { label: "Due Today", value: "3", cls: "text-amber-600" },
+                { label: "Won", value: "4", cls: "text-emerald-600" },
+                { label: "Conversion", value: "44%", cls: "text-emerald-600" },
+              ].map(({ label, value, cls }) => (
+                <div key={label} className="bg-white rounded-xl border border-slate-100 px-3 py-2.5 shadow-sm">
+                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">{label}</p>
+                  <p className={`text-xl font-bold leading-none mt-0.5 ${cls}`}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Section label */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-700">Today's Follow-ups</p>
+              <span className="text-[10px] text-emerald-700 font-medium">See all</span>
+            </div>
+
+            {/* Lead cards — full width, readable */}
+            <div className="space-y-2">
+              {[
+                { name: "Maria Santos", service: "Deep house clean", badge: "Due Today", badgeCls: "bg-amber-100 text-amber-700", initial: "M" },
+                { name: "James Holloway", service: "Brake pad replacement", badge: "Overdue", badgeCls: "bg-red-100 text-red-700", initial: "J" },
+                { name: "David Kim", service: "Oil change & tires", badge: "Won ✓", badgeCls: "bg-emerald-100 text-emerald-700", initial: "D" },
+              ].map(({ name, service, badge, badgeCls, initial }) => (
+                <div key={name} className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 px-3 py-2.5 shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 shrink-0">
+                    {initial}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-800 truncate">{name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{service}</p>
+                  </div>
+                  <span className={`shrink-0 text-[9px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${badgeCls}`}>{badge}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom nav bar */}
+        <div className="flex items-center justify-around px-4 py-2.5 bg-white border-t border-slate-100">
+          {[
+            { label: "Dashboard", active: true },
+            { label: "Leads", active: false },
+            { label: "Add Lead", active: false },
+          ].map(({ label, active }) => (
+            <div key={label} className="flex flex-col items-center gap-0.5">
+              <div className={`w-5 h-5 rounded-md ${active ? "bg-emerald-700" : "bg-slate-200"}`} />
+              <span className={`text-[9px] font-medium ${active ? "text-emerald-700" : "text-slate-400"}`}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Home indicator */}
+        <div className="flex justify-center pb-2 pt-1 bg-white">
+          <div className="w-20 h-1 rounded-full bg-slate-300" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const [, navigate] = useLocation();
   const { user, isLoading } = useAuth();
@@ -215,13 +322,13 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="max-w-xl mx-auto space-y-6">
+      <section className="flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center">
+        <div className="max-w-xl mx-auto space-y-4 md:space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 uppercase tracking-wide">
             Built for small service businesses
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-tight tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight tracking-tight">
             Never forget a customer follow-up again.
           </h1>
 
@@ -255,17 +362,24 @@ export default function Landing() {
       </section>
 
       {/* Product mockup */}
-      <section className="px-6 pb-16">
+      <section className="px-4 pb-12 md:pb-16">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">
+          <div className="text-center mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">
               Everything you need, in one clean dashboard
             </h2>
             <p className="text-muted-foreground mt-2 text-sm">
               See your leads, stats, and follow-ups at a glance — no complex CRM required.
             </p>
           </div>
-          <ProductMockup />
+          {/* Desktop mockup — hidden on mobile */}
+          <div className="hidden md:block">
+            <ProductMockup />
+          </div>
+          {/* Mobile mockup — shown only on mobile */}
+          <div className="md:hidden">
+            <MobileProductMockup />
+          </div>
         </div>
       </section>
 
