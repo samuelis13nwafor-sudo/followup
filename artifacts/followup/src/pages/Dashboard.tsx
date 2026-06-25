@@ -11,6 +11,7 @@ import { WalkthroughOverlay } from "@/components/WalkthroughOverlay";
 import { OnboardingWalkthrough } from "@/components/OnboardingWalkthrough";
 import { DemoBanner } from "@/components/DemoBanner";
 import { InstallBanner } from "@/components/InstallBanner";
+import { PushNotificationCard } from "@/components/PushNotificationCard";
 
 type DashFilter =
   | "all" | "open" | "won" | "closed"
@@ -282,6 +283,7 @@ export default function Dashboard() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <InstallBanner />
+          <PushNotificationCard />
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-3">
               <p className="text-lg font-semibold text-foreground">No leads yet.</p>
@@ -322,6 +324,7 @@ export default function Dashboard() {
 
         <DemoBanner />
         <InstallBanner />
+        <PushNotificationCard />
 
         {/* Row 1 — Business Metrics */}
         <div>

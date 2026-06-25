@@ -62,6 +62,8 @@ export function InstallBanner() {
     const p = detectPlatform();
     setPlatform(p);
 
+    let cleanup: (() => void) | undefined;
+
     if (p === "android-desktop") {
       // Use already-captured prompt if available, or wait for the event.
       if (_capturedPrompt) {
@@ -75,12 +77,14 @@ export function InstallBanner() {
           setVisible(true);
         }
         window.addEventListener("beforeinstallprompt", onPrompt);
-        return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+        cleanup = () => window.removeEventListener("beforeinstallprompt", onPrompt);
       }
     } else {
       // iOS — always show the instructions (Safari or Chrome message)
       setVisible(true);
     }
+
+    return cleanup;
   }, []);
 
   function dismiss() {
