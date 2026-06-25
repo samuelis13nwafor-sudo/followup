@@ -20,6 +20,7 @@ import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ function App() {
                   <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                     <Router />
                     <Toaster />
+                    <InstallPrompt />
                   </WouterRouter>
                 </ViewProvider>
               </DevDateProvider>
