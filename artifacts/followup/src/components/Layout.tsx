@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
   import {
     LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2,
-    RotateCcw, UserX, TestTubeDiagonal, LogOut, User,
+    RotateCcw, UserX, TestTubeDiagonal, LogOut, User, BellRing,
   } from "lucide-react";
   import { NotificationBell } from "@/components/NotificationBell";
   import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Link, useLocation } from "wouter";
   import { useLeads } from "@/hooks/useLeads";
   import { useOnboarding } from "@/contexts/OnboardingContext";
   import { useAuth } from "@/contexts/AuthContext";
-  import { supabaseConfigured } from "@/lib/supabase";
+  import { supabase, supabaseConfigured } from "@/lib/supabase";
   import { getSeedLeads } from "@/lib/leadUtils";
   import { generateFakeLeads } from "@/lib/generateFakeLeads";
   import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,61 @@ import { Link, useLocation } from "wouter";
     const { user } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState<string | null>(null);
+
+    interface ReminderCheckResult {
+      ok: boolean;
+      error?: string;
+      result?: {
+        checked: number;
+        sent: number;
+        skippedAlreadySent: number;
+        skippedWonLost: number;
+        errors: Array<{ leadName: string; reason: string }>;
+        dueLeads: string[];
+        dedup: string;
+      };
+    }
+    const [reminderResult, setReminderResult] = useState<ReminderCheckResult | null>(null);
+
+    async function handleRunReminderCheck(): Promise<void> {
+      setLoading("reminders");
+      setReminderResult(null);
+      try {
+        let sub: PushSubscription | null = null;
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) {
+            sub = await reg.pushManager.getSubscription();
+            if (sub) break;
+          }
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        const jwt = session?.access_token ?? null;
+        const today = getToday();
+        const res = await fetch("/api/reminders/run", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+          },
+          body: JSON.stringify({
+            leads: leads.map(l => ({ id: l.id, name: l.name, followUpDate: l.followUpDate, status: l.status })),
+            subscription: sub?.toJSON() ?? null,
+            today,
+            userId: user?.id ?? null,
+          }),
+        });
+        const data = await res.json() as ReminderCheckResult;
+        setReminderResult(data);
+        if (data.ok && data.result && data.result.sent > 0) {
+          toast({ title: `Sent ${data.result.sent} reminder${data.result.sent !== 1 ? "s" : ""}` });
+        }
+      } catch (err) {
+        setReminderResult({ ok: false, error: err instanceof Error ? err.message : "Reminder check failed." });
+      } finally {
+        setLoading(null);
+      }
+    }
 
     function handleGenerate() {
       setLoading("generate");
@@ -171,6 +226,60 @@ import { Link, useLocation } from "wouter";
                   <UserX className="h-3.5 w-3.5 shrink-0 text-amber-600" />
                   Reset Onboarding / Demo State
                 </button>
+              </div>
+
+              {/* Reminder Engine */}
+              <div className="space-y-1.5 border-t border-amber-200 pt-3">
+                <p className="text-xs text-amber-700 font-medium">Reminder Engine</p>
+                <button
+                  type="button"
+                  onClick={() => void handleRunReminderCheck()}
+                  disabled={loading === "reminders"}
+                  className="w-full flex items-center gap-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 active:bg-amber-200 transition-colors cursor-pointer disabled:opacity-60 touch-manipulation"
+                >
+                  <BellRing className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                  {loading === "reminders" ? "Running…" : "Run Reminder Check"}
+                </button>
+                {reminderResult && (
+                  <div className="rounded-md border border-amber-200 bg-white px-3 py-2 space-y-1 text-xs">
+                    {reminderResult.ok && reminderResult.result ? (
+                      <>
+                        <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                          <dt className="text-amber-600">Leads checked</dt>
+                          <dd className="font-semibold text-amber-900">{reminderResult.result.checked}</dd>
+                          <dt className="text-amber-600">Reminders sent</dt>
+                          <dd className={`font-semibold ${reminderResult.result.sent > 0 ? "text-emerald-700" : "text-amber-900"}`}>
+                            {reminderResult.result.sent}
+                          </dd>
+                          <dt className="text-amber-600">Already sent today</dt>
+                          <dd className="font-semibold text-amber-900">{reminderResult.result.skippedAlreadySent}</dd>
+                          <dt className="text-amber-600">Won/Lost (skipped)</dt>
+                          <dd className="font-semibold text-amber-900">{reminderResult.result.skippedWonLost}</dd>
+                          {reminderResult.result.errors.length > 0 && (
+                            <>
+                              <dt className="text-red-600">Errors</dt>
+                              <dd className="font-semibold text-red-700">{reminderResult.result.errors.length}</dd>
+                            </>
+                          )}
+                        </dl>
+                        {reminderResult.result.dueLeads.length > 0 && (
+                          <p className="text-amber-600 mt-1 leading-snug">
+                            Due: {reminderResult.result.dueLeads.slice(0, 3).join(", ")}
+                            {reminderResult.result.dueLeads.length > 3
+                              ? ` +${reminderResult.result.dueLeads.length - 3} more`
+                              : ""}
+                          </p>
+                        )}
+                        {reminderResult.result.errors.map((e, i) => (
+                          <p key={i} className="text-red-600 leading-snug">{e.leadName}: {e.reason}</p>
+                        ))}
+                        <p className="text-amber-400 text-[10px]">dedup: {reminderResult.result.dedup}</p>
+                      </>
+                    ) : (
+                      <p className="text-red-600">{reminderResult.error ?? "Check failed."}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}
