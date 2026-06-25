@@ -25,6 +25,7 @@ interface LeadInput {
   name: string;
   followUpDate: string;
   status: string;
+  isDemo?: boolean;
 }
 
 interface ReminderResult {
@@ -32,8 +33,12 @@ interface ReminderResult {
   sent: number;
   skippedAlreadySent: number;
   skippedWonLost: number;
+  skippedDemo: number;
+  dueToday: number;
+  overdue: number;
   errors: Array<{ leadName: string; reason: string }>;
-  dueLeads: string[];
+  dueTodayNames: string[];
+  overdueNames: string[];
   dedup: "supabase" | "in-memory";
 }
 
@@ -138,26 +143,40 @@ router.post("/reminders/run", async (req, res) => {
     sent: 0,
     skippedAlreadySent: 0,
     skippedWonLost: 0,
+    skippedDemo: 0,
+    dueToday: 0,
+    overdue: 0,
     errors: [],
-    dueLeads: [],
+    dueTodayNames: [],
+    overdueNames: [],
     dedup,
   };
 
-  // Filter: skip Won/Lost; skip leads with future follow-up dates
-  const dueLeads: LeadInput[] = [];
+  // Filter: same logic as dashboard — skip Won/Lost, demo leads, and future dates.
+  // Separate "due today" (exact match) from "overdue" (strictly before today).
+  const dueTodayLeads: LeadInput[] = [];
+  const overdueLeads: LeadInput[] = [];
   for (const lead of leads) {
-    if (CLOSED_STATUSES.has(lead.status)) {
-      result.skippedWonLost++;
-      continue;
+    if (CLOSED_STATUSES.has(lead.status)) { result.skippedWonLost++; continue; }
+    if (lead.isDemo) { result.skippedDemo++; continue; }
+    if (lead.followUpDate > today) continue; // future — silent skip (not yet due)
+    if (lead.followUpDate === today) {
+      dueTodayLeads.push(lead);
+    } else {
+      overdueLeads.push(lead); // followUpDate < today
     }
-    if (lead.followUpDate > today) continue; // not due yet — not counted as skipped
-    dueLeads.push(lead);
   }
-  result.dueLeads = dueLeads.map((l) => l.name);
+  result.dueToday = dueTodayLeads.length;
+  result.overdue = overdueLeads.length;
+  result.dueTodayNames = dueTodayLeads.map((l) => l.name);
+  result.overdueNames = overdueLeads.map((l) => l.name);
+
+  // Eligible = overdue first (most urgent), then due today
+  const eligibleLeads = [...overdueLeads, ...dueTodayLeads];
 
   // Dedup: skip leads already reminded today
   const toRemind: LeadInput[] = [];
-  for (const lead of dueLeads) {
+  for (const lead of eligibleLeads) {
     const already = dedup === "supabase"
       ? alreadySentIds.has(lead.id)
       : inMemoryCheck(today, userId, lead.id);
@@ -174,18 +193,23 @@ router.post("/reminders/run", async (req, res) => {
     return;
   }
 
-  // Build push payload
+  // Build push payload — use "due or overdue" copy when any overdue leads are included
+  const toRemindHasOverdue = toRemind.some((l) => l.followUpDate < today);
   let title: string;
   let body: string;
   let url: string;
 
   if (toRemind.length === 1) {
     title = "FollowUp reminder";
-    body = `${toRemind[0].name} is due for follow-up today.`;
+    body = toRemindHasOverdue
+      ? `${toRemind[0].name} is overdue for follow-up.`
+      : `${toRemind[0].name} is due for follow-up today.`;
     url = `/leads/${toRemind[0].id}`;
   } else {
     title = "FollowUp reminders";
-    body = `You have ${toRemind.length} follow-ups due today.`;
+    body = toRemindHasOverdue
+      ? `You have ${toRemind.length} follow-ups due or overdue.`
+      : `You have ${toRemind.length} follow-ups due today.`;
     url = "/dashboard";
   }
 

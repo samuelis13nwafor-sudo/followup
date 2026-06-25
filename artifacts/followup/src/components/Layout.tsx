@@ -32,8 +32,12 @@ import { Link, useLocation } from "wouter";
         sent: number;
         skippedAlreadySent: number;
         skippedWonLost: number;
+        skippedDemo: number;
+        dueToday: number;
+        overdue: number;
         errors: Array<{ leadName: string; reason: string }>;
-        dueLeads: string[];
+        dueTodayNames: string[];
+        overdueNames: string[];
         dedup: string;
       };
     }
@@ -61,7 +65,9 @@ import { Link, useLocation } from "wouter";
             ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
           },
           body: JSON.stringify({
-            leads: leads.map(l => ({ id: l.id, name: l.name, followUpDate: l.followUpDate, status: l.status })),
+            leads: leads
+              .filter(l => !l.is_demo)
+              .map(l => ({ id: l.id, name: l.name, followUpDate: l.followUpDate, status: l.status, isDemo: false })),
             subscription: sub?.toJSON() ?? null,
             today,
             userId: user?.id ?? null,
@@ -242,40 +248,55 @@ import { Link, useLocation } from "wouter";
                 </button>
                 {reminderResult && (
                   <div className="rounded-md border border-amber-200 bg-white px-3 py-2 space-y-1 text-xs">
-                    {reminderResult.ok && reminderResult.result ? (
-                      <>
-                        <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                          <dt className="text-amber-600">Leads checked</dt>
-                          <dd className="font-semibold text-amber-900">{reminderResult.result.checked}</dd>
-                          <dt className="text-amber-600">Reminders sent</dt>
-                          <dd className={`font-semibold ${reminderResult.result.sent > 0 ? "text-emerald-700" : "text-amber-900"}`}>
-                            {reminderResult.result.sent}
-                          </dd>
-                          <dt className="text-amber-600">Already sent today</dt>
-                          <dd className="font-semibold text-amber-900">{reminderResult.result.skippedAlreadySent}</dd>
-                          <dt className="text-amber-600">Won/Lost (skipped)</dt>
-                          <dd className="font-semibold text-amber-900">{reminderResult.result.skippedWonLost}</dd>
-                          {reminderResult.result.errors.length > 0 && (
-                            <>
-                              <dt className="text-red-600">Errors</dt>
-                              <dd className="font-semibold text-red-700">{reminderResult.result.errors.length}</dd>
-                            </>
+                    {reminderResult.ok && reminderResult.result ? (() => {
+                      const r = reminderResult.result!;
+                      return (
+                        <>
+                          <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                            <dt className="text-amber-600">Leads checked</dt>
+                            <dd className="font-semibold text-amber-900">{r.checked}</dd>
+                            <dt className="text-amber-600">Due today</dt>
+                            <dd className={`font-semibold ${r.dueToday > 0 ? "text-amber-700" : "text-amber-900"}`}>{r.dueToday}</dd>
+                            <dt className="text-amber-600">Overdue</dt>
+                            <dd className={`font-semibold ${r.overdue > 0 ? "text-red-600" : "text-amber-900"}`}>{r.overdue}</dd>
+                            <dt className="text-amber-600">Total eligible</dt>
+                            <dd className="font-semibold text-amber-900">{r.dueToday + r.overdue}</dd>
+                            <dt className="text-amber-600">Reminders sent</dt>
+                            <dd className={`font-semibold ${r.sent > 0 ? "text-emerald-700" : "text-amber-900"}`}>{r.sent}</dd>
+                            <dt className="text-amber-600">Already sent today</dt>
+                            <dd className="font-semibold text-amber-900">{r.skippedAlreadySent}</dd>
+                            <dt className="text-amber-600">Won/Lost (skipped)</dt>
+                            <dd className="font-semibold text-amber-900">{r.skippedWonLost}</dd>
+                            {r.skippedDemo > 0 && (
+                              <>
+                                <dt className="text-amber-600">Demo (skipped)</dt>
+                                <dd className="font-semibold text-amber-900">{r.skippedDemo}</dd>
+                              </>
+                            )}
+                            {r.errors.length > 0 && (
+                              <>
+                                <dt className="text-red-600">Errors</dt>
+                                <dd className="font-semibold text-red-700">{r.errors.length}</dd>
+                              </>
+                            )}
+                          </dl>
+                          {r.dueTodayNames.length > 0 && (
+                            <p className="text-amber-700 mt-1 leading-snug">
+                              Today: {r.dueTodayNames.slice(0, 3).join(", ")}{r.dueTodayNames.length > 3 ? ` +${r.dueTodayNames.length - 3} more` : ""}
+                            </p>
                           )}
-                        </dl>
-                        {reminderResult.result.dueLeads.length > 0 && (
-                          <p className="text-amber-600 mt-1 leading-snug">
-                            Due: {reminderResult.result.dueLeads.slice(0, 3).join(", ")}
-                            {reminderResult.result.dueLeads.length > 3
-                              ? ` +${reminderResult.result.dueLeads.length - 3} more`
-                              : ""}
-                          </p>
-                        )}
-                        {reminderResult.result.errors.map((e, i) => (
-                          <p key={i} className="text-red-600 leading-snug">{e.leadName}: {e.reason}</p>
-                        ))}
-                        <p className="text-amber-400 text-[10px]">dedup: {reminderResult.result.dedup}</p>
-                      </>
-                    ) : (
+                          {r.overdueNames.length > 0 && (
+                            <p className="text-red-600 mt-0.5 leading-snug">
+                              Overdue: {r.overdueNames.slice(0, 3).join(", ")}{r.overdueNames.length > 3 ? ` +${r.overdueNames.length - 3} more` : ""}
+                            </p>
+                          )}
+                          {r.errors.map((e, i) => (
+                            <p key={i} className="text-red-600 leading-snug">{e.leadName}: {e.reason}</p>
+                          ))}
+                          <p className="text-amber-400 text-[10px]">dedup: {r.dedup}</p>
+                        </>
+                      );
+                    })() : (
                       <p className="text-red-600">{reminderResult.error ?? "Check failed."}</p>
                     )}
                   </div>
