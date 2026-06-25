@@ -223,6 +223,10 @@ importers:
         version: 3.1.0
 
   artifacts/followup:
+    dependencies:
+      web-push:
+        specifier: ^3.6.7
+        version: 3.6.7
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0

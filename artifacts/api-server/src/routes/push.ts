@@ -20,6 +20,54 @@ router.get("/push/vapid-public-key", (_req, res) => {
   res.json({ publicKey: vapidPublicKey });
 });
 
+// /api/push/test — same handler, matches the Vercel function name
+router.post("/push/test", async (req, res) => {
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    res.status(503).json({ error: "VAPID keys not configured." });
+    return;
+  }
+
+  const { subscription } = req.body as { subscription?: PushSubscription };
+
+  if (
+    !subscription?.endpoint ||
+    !subscription?.keys?.p256dh ||
+    !subscription?.keys?.auth
+  ) {
+    res.status(400).json({ error: "Invalid or missing push subscription." });
+    return;
+  }
+
+  const payload = JSON.stringify({
+    title: "FollowUp reminder",
+    body: "Test notification from FollowUp.",
+    url: "/dashboard",
+  });
+
+  try {
+    await webpush.sendNotification(subscription, payload);
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to send test push notification");
+    res.status(500).json({ error: "Failed to deliver push notification." });
+  }
+});
+
+// /api/push/subscribe — validate a push subscription (Supabase save is done client-side)
+router.post("/push/subscribe", (req, res) => {
+  const { subscription } = req.body as { subscription?: PushSubscription };
+  if (
+    !subscription?.endpoint ||
+    !subscription?.keys?.p256dh ||
+    !subscription?.keys?.auth
+  ) {
+    res.status(400).json({ error: "Invalid push subscription." });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+// /api/push/send-test — legacy alias kept for compatibility
 router.post("/push/send-test", async (req, res) => {
   if (!vapidPublicKey || !vapidPrivateKey) {
     res.status(503).json({ error: "VAPID keys not configured." });

@@ -2,13 +2,34 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 
 const VAPID_KEY_URL = "/api/push/vapid-public-key";
-const SEND_TEST_URL = "/api/push/send-test";
+const SUBSCRIBE_URL = "/api/push/subscribe";
+const SEND_TEST_URL = "/api/push/test";
 const DISMISSED_KEY = "followup_push_dismissed_until";
 const ENABLED_KEY = "followup_push_enabled";
 const IS_DEV = import.meta.env.DEV;
 
 function devLog(...args: unknown[]): void {
   if (IS_DEV) console.log("[Push]", ...args);
+}
+
+/**
+ * Fetch wrapper that detects HTML responses (Vercel 404 / SPA fallback)
+ * and throws a clear, user-facing error instead of a cryptic JSON parse failure.
+ */
+async function safeJsonFetch(
+  url: string,
+  options?: RequestInit
+): Promise<Response> {
+  const res = await fetch(url, options);
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    // Endpoint returned HTML — likely a missing API route or routing misconfiguration
+    devLog(`safeJsonFetch: ${url} returned non-JSON (${contentType})`);
+    throw Object.assign(new Error("not-json"), {
+      userMessage: "Push notifications are not configured yet.",
+    });
+  }
+  return res;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -122,7 +143,8 @@ export function usePushNotifications(userId: string | null | undefined) {
     let vapidKeyPresent: boolean | null = null;
     try {
       const res = await fetch(VAPID_KEY_URL);
-      if (res.ok) {
+      const ct = res.headers.get("content-type") ?? "";
+      if (res.ok && ct.includes("application/json")) {
         const data = (await res.json()) as { publicKey?: string };
         vapidKeyPresent = Boolean(data.publicKey);
       } else {
@@ -145,7 +167,9 @@ export function usePushNotifications(userId: string | null | undefined) {
     devLog("Initialising push state check…");
 
     if (!isPushSupported()) {
-      devLog("Push not supported (missing serviceWorker, PushManager, or Notification API)");
+      devLog(
+        "Push not supported (missing serviceWorker, PushManager, or Notification API)"
+      );
       setPushState("unsupported");
       void refreshDiag();
       return;
@@ -206,22 +230,31 @@ export function usePushNotifications(userId: string | null | undefined) {
     try {
       // Step 1 — check browser support
       devLog("Step 1: Checking Notification API support…");
-      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      if (
+        !("Notification" in window) ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window)
+      ) {
         throw Object.assign(new Error("unsupported"), {
           userMessage: "Push notifications are not supported in this browser.",
         });
       }
-      devLog("Step 1: Notification API present, permission:", Notification.permission);
+      devLog(
+        "Step 1: Notification API present, permission:",
+        Notification.permission
+      );
 
-      // Step 2 — fetch VAPID public key
+      // Step 2 — fetch VAPID public key (safe: detects HTML response)
       devLog("Step 2: Fetching VAPID public key from server…");
-      const res = await fetch(VAPID_KEY_URL);
-      if (!res.ok) {
+      const vapidRes = await safeJsonFetch(VAPID_KEY_URL);
+      if (!vapidRes.ok) {
         throw Object.assign(new Error("vapid-missing"), {
           userMessage: "Push notifications are not configured yet.",
         });
       }
-      const { publicKey } = (await res.json()) as { publicKey?: string };
+      const { publicKey } = (await vapidRes.json()) as {
+        publicKey?: string;
+      };
       if (!publicKey) {
         throw Object.assign(new Error("vapid-empty"), {
           userMessage: "Push notifications are not configured yet.",
@@ -236,7 +269,8 @@ export function usePushNotifications(userId: string | null | undefined) {
         reg = await waitForSWReady(10_000);
       } catch {
         throw Object.assign(new Error("sw-timeout"), {
-          userMessage: "Service worker took too long. Try reloading the page.",
+          userMessage:
+            "Service worker took too long. Try reloading the page.",
         });
       }
       devLog("Step 3: Service worker active, scope:", reg.scope);
@@ -268,8 +302,25 @@ export function usePushNotifications(userId: string | null | undefined) {
       setEnableStatus("success");
       localStorage.setItem(ENABLED_KEY, "1");
 
-      // Step 6 — persist to Supabase
-      devLog("Step 6: Saving subscription to Supabase…");
+      // Step 6 — register subscription server-side (non-fatal)
+      devLog("Step 6: Registering subscription with server…");
+      try {
+        const subRes = await safeJsonFetch(SUBSCRIBE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscription: sub.toJSON() }),
+        });
+        if (!subRes.ok) {
+          devLog("Step 6: Server registration returned non-OK (non-fatal)");
+        } else {
+          devLog("Step 6: Server registration OK");
+        }
+      } catch (err) {
+        devLog("Step 6: Server registration failed (non-fatal):", err);
+      }
+
+      // Step 7 — persist to Supabase
+      devLog("Step 7: Saving subscription to Supabase…");
       if (supabaseConfigured && userId) {
         const subJson = sub.toJSON();
         const { error } = await supabase.from("push_subscriptions").upsert(
@@ -282,17 +333,21 @@ export function usePushNotifications(userId: string | null | undefined) {
           { onConflict: "user_id,endpoint" }
         );
         if (error) {
-          devLog("Step 6: Supabase save failed (non-fatal):", error.message);
+          devLog("Step 7: Supabase save failed (non-fatal):", error.message);
         } else {
-          devLog("Step 6: Subscription saved to Supabase");
+          devLog("Step 7: Subscription saved to Supabase");
         }
       } else {
-        devLog("Step 6: Skipped — Supabase not configured or user not signed in");
+        devLog(
+          "Step 7: Skipped — Supabase not configured or user not signed in"
+        );
       }
     } catch (err) {
       const userMessage =
         (err as { userMessage?: string }).userMessage ??
-        (err instanceof Error ? err.message : "Something went wrong. Please try again.");
+        (err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.");
       devLog("enable() failed:", err);
       setEnableStatus("error");
       setEnableError(userMessage);
@@ -312,7 +367,7 @@ export function usePushNotifications(userId: string | null | undefined) {
     setIsSending(true);
     setSendResult(null);
     try {
-      const res = await fetch(SEND_TEST_URL, {
+      const res = await safeJsonFetch(SEND_TEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscription: subscription.toJSON() }),
