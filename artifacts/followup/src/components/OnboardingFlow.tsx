@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, ChevronLeft, X, Wrench, Sparkles, Scissors, Car, Home, Layers, type LucideIcon } from "lucide-react";
+import { ChevronRight, ChevronLeft, Wrench, Sparkles, Scissors, Car, Home, Layers, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeads } from "@/hooks/useLeads";
 import { Lead } from "@/contexts/LeadsContext";
@@ -18,7 +18,16 @@ const BUSINESS_TYPES: { label: BusinessType; icon: LucideIcon; description: stri
   { label: "Other",            icon: Layers,   description: "Flexible lead tracking for any service business." },
 ];
 
-function makeSampleLeads(): Lead[] {
+const SERVICE_PLACEHOLDER: Record<BusinessType, string> = {
+  "Auto Repair":      "e.g. Brake pad replacement",
+  "Cleaning Service": "e.g. Deep house cleaning",
+  "Barber / Salon":   "e.g. Haircut & beard trim",
+  "Driving School":   "e.g. Beginner driving lesson",
+  "Home Services":    "e.g. Drywall repair",
+  "Other":            "e.g. Customer follow-up",
+};
+
+function makeSampleLeads(businessType: BusinessType | null): Lead[] {
   const today = getTodayDateString();
   function daysAgoISO(n: number) {
     const d = new Date();
@@ -28,90 +37,169 @@ function makeSampleLeads(): Lead[] {
   function entry(msg: string, daysAgo = 0) {
     return { id: crypto.randomUUID(), date: daysAgoISO(daysAgo), message: msg };
   }
+  function lead(
+    name: string, phone: string, service: string, source: string,
+    notes: string, followUpDate: string, status: Lead["status"],
+    createdDaysAgo: number, updatedDaysAgo: number,
+    activityEntries: { msg: string; daysAgo: number }[]
+  ): Lead {
+    return {
+      id: crypto.randomUUID(),
+      name, phone, service, source, notes, followUpDate, status,
+      createdAt: daysAgoISO(createdDaysAgo),
+      updatedAt: daysAgoISO(updatedDaysAgo),
+      activity: activityEntries.map(({ msg, daysAgo }) => entry(msg, daysAgo)),
+      is_demo: true,
+    };
+  }
 
+  if (businessType === "Cleaning Service") {
+    return [
+      lead("Maria Santos", "555-0182", "Deep house clean — 3 bed", "Referral",
+        "Referred by the Patel family. Needs a quote before end of week.",
+        addDaysToDate(today, -2), "New", 3, 3, [{ msg: "Lead created", daysAgo: 3 }]),
+      lead("Rachel Thompson", "555-0193", "End of tenancy clean", "Online",
+        "Moving out at end of month. Wants full clean including oven and windows.",
+        today, "New", 1, 1, [{ msg: "Lead created", daysAgo: 1 }]),
+      lead("James Patel", "555-0177", "Weekly office clean — 5 desks", "Walk-in",
+        "Small accountancy firm. Wants a regular weekly slot, preferably Friday morning.",
+        addDaysToDate(today, 2), "Contacted", 5, 2,
+        [{ msg: "Lead created", daysAgo: 5 }, { msg: "Status changed to Contacted", daysAgo: 2 }]),
+      lead("Lucy Chen", "555-0164", "Post-renovation clean — full house", "Phone call",
+        "Builders leaving next week. Sent a quote for £280. Awaiting decision.",
+        addDaysToDate(today, 3), "Quote Sent", 7, 1,
+        [{ msg: "Lead created", daysAgo: 7 }, { msg: "Status changed to Contacted", daysAgo: 5 },
+         { msg: "Status changed to Quote Sent", daysAgo: 1 }]),
+      lead("David Wilson", "555-0158", "Carpet steam clean — lounge & stairs", "Referral",
+        "Booked and paid. Happy customer — follow up in 3 months for a repeat.",
+        addDaysToDate(today, 90), "Won", 10, 3,
+        [{ msg: "Lead created", daysAgo: 10 }, { msg: "Status changed to Contacted", daysAgo: 8 },
+         { msg: "Status changed to Quote Sent", daysAgo: 6 }, { msg: "Status changed to Won", daysAgo: 3 }]),
+    ];
+  }
+
+  if (businessType === "Barber / Salon") {
+    return [
+      lead("Marcus Thompson", "555-0191", "Haircut & beard trim", "Walk-in",
+        "Regular-style cut, skin fade sides. Came in last Tuesday — wants to rebook.",
+        addDaysToDate(today, -2), "New", 3, 3, [{ msg: "Lead created", daysAgo: 3 }]),
+      lead("Sofia Rivera", "555-0175", "Balayage & blow-dry", "Instagram",
+        "Saw the work on Instagram. Wants natural highlights. Budget around £120.",
+        today, "New", 1, 1, [{ msg: "Lead created", daysAgo: 1 }]),
+      lead("Jordan Lee", "555-0163", "Shape-up & line-up", "Referral",
+        "Referred by Marcus. Books every 3 weeks. Confirmed appointment next Thursday.",
+        addDaysToDate(today, 4), "Contacted", 5, 2,
+        [{ msg: "Lead created", daysAgo: 5 }, { msg: "Status changed to Contacted", daysAgo: 2 }]),
+      lead("Emma Davis", "555-0149", "Full colour & style", "Phone call",
+        "Sent a quote for £95 including toner. Waiting on confirmation.",
+        addDaysToDate(today, 3), "Quote Sent", 7, 1,
+        [{ msg: "Lead created", daysAgo: 7 }, { msg: "Status changed to Contacted", daysAgo: 5 },
+         { msg: "Status changed to Quote Sent", daysAgo: 1 }]),
+      lead("Kai Okafor", "555-0158", "Beard shaping & hot towel shave", "Walk-in",
+        "Booked and done. Loved it — coming back monthly.",
+        addDaysToDate(today, 30), "Won", 10, 3,
+        [{ msg: "Lead created", daysAgo: 10 }, { msg: "Status changed to Contacted", daysAgo: 8 },
+         { msg: "Status changed to Won", daysAgo: 3 }]),
+    ];
+  }
+
+  if (businessType === "Driving School") {
+    return [
+      lead("Kevin Park", "555-0174", "10-lesson driving package", "Online",
+        "Enquired online. Spoke on the phone — very keen. Wants to start next week.",
+        addDaysToDate(today, -2), "New", 4, 2, [{ msg: "Lead created", daysAgo: 4 }]),
+      lead("Amy Chen", "555-0186", "Intensive 5-day course", "Referral",
+        "Referred by a previous student. Test booked in 3 weeks. Needs crash course.",
+        today, "New", 1, 1, [{ msg: "Lead created", daysAgo: 1 }]),
+      lead("Daniel Webb", "555-0162", "Theory + 3 practical lessons", "Phone call",
+        "Called to ask about theory support. Confirmed first lesson Saturday 10am.",
+        addDaysToDate(today, 5), "Contacted", 5, 2,
+        [{ msg: "Lead created", daysAgo: 5 }, { msg: "Status changed to Contacted", daysAgo: 2 }]),
+      lead("Priya Sharma", "555-0151", "Refresher lesson — 2 hours", "Online",
+        "Passed years ago but hasn't driven since. Sent quote for 2-hour refresher.",
+        addDaysToDate(today, 3), "Quote Sent", 7, 1,
+        [{ msg: "Lead created", daysAgo: 7 }, { msg: "Status changed to Contacted", daysAgo: 5 },
+         { msg: "Status changed to Quote Sent", daysAgo: 1 }]),
+      lead("Marcus Liu", "555-0158", "Motorway & dual carriageway lesson", "Referral",
+        "Booked and completed. Very confident driver. Follow up for Pass Plus course.",
+        addDaysToDate(today, 14), "Won", 10, 3,
+        [{ msg: "Lead created", daysAgo: 10 }, { msg: "Status changed to Contacted", daysAgo: 8 },
+         { msg: "Status changed to Won", daysAgo: 3 }]),
+    ];
+  }
+
+  if (businessType === "Home Services") {
+    return [
+      lead("Robert Mills", "555-0191", "Drywall repair — living room", "Referral",
+        "Large crack above fireplace. Came recommended by a neighbour. Needs quote ASAP.",
+        addDaysToDate(today, -2), "New", 3, 3, [{ msg: "Lead created", daysAgo: 3 }]),
+      lead("Sarah Johnson", "555-0178", "Kitchen tap replacement", "Phone call",
+        "Dripping mixer tap. Has the replacement already — just needs fitting.",
+        today, "New", 1, 1, [{ msg: "Lead created", daysAgo: 1 }]),
+      lead("Dave Walsh", "555-0166", "Garden fence installation — 20m", "Online",
+        "Enquired online. Site visit confirmed for next Tuesday. Rough quote £600.",
+        addDaysToDate(today, 4), "Contacted", 5, 2,
+        [{ msg: "Lead created", daysAgo: 5 }, { msg: "Status changed to Contacted", daysAgo: 2 }]),
+      lead("Michelle Park", "555-0154", "Bathroom re-seal & caulking", "Walk-in",
+        "Full shower re-seal. Sent quote for £85. She said she'd confirm by Friday.",
+        addDaysToDate(today, 3), "Quote Sent", 7, 1,
+        [{ msg: "Lead created", daysAgo: 7 }, { msg: "Status changed to Contacted", daysAgo: 5 },
+         { msg: "Status changed to Quote Sent", daysAgo: 1 }]),
+      lead("Tim Evans", "555-0158", "Exterior house painting", "Referral",
+        "Booked and completed. Happy with the result. Check back next spring.",
+        addDaysToDate(today, 180), "Won", 10, 3,
+        [{ msg: "Lead created", daysAgo: 10 }, { msg: "Status changed to Contacted", daysAgo: 8 },
+         { msg: "Status changed to Quote Sent", daysAgo: 6 }, { msg: "Status changed to Won", daysAgo: 3 }]),
+    ];
+  }
+
+  if (businessType === "Other") {
+    return [
+      lead("James Holloway", "555-0191", "Initial consultation", "Referral",
+        "Referred by an existing client. Looking for ongoing support. Follow up this week.",
+        addDaysToDate(today, -2), "New", 3, 3, [{ msg: "Lead created", daysAgo: 3 }]),
+      lead("Maria Santos", "555-0182", "Service quote — package deal", "Online",
+        "Enquired online. Interested in a monthly package. Needs pricing.",
+        today, "New", 1, 1, [{ msg: "Lead created", daysAgo: 1 }]),
+      lead("Kevin Park", "555-0174", "Follow-up call scheduled", "Phone call",
+        "Spoke briefly. Very interested. Confirmed a follow-up call Wednesday at 2pm.",
+        addDaysToDate(today, 2), "Contacted", 5, 2,
+        [{ msg: "Lead created", daysAgo: 5 }, { msg: "Status changed to Contacted", daysAgo: 2 }]),
+      lead("Aisha Okafor", "555-0165", "Custom service package", "Referral",
+        "Sent a tailored quote. Waiting to hear back — she mentioned a decision by Thursday.",
+        addDaysToDate(today, 3), "Quote Sent", 6, 1,
+        [{ msg: "Lead created", daysAgo: 6 }, { msg: "Status changed to Contacted", daysAgo: 4 },
+         { msg: "Status changed to Quote Sent", daysAgo: 1 }]),
+      lead("David Kim", "555-0158", "Ongoing monthly service", "Referral",
+        "Signed up. Regular customer — check in next month to renew.",
+        addDaysToDate(today, 30), "Won", 10, 3,
+        [{ msg: "Lead created", daysAgo: 10 }, { msg: "Status changed to Contacted", daysAgo: 8 },
+         { msg: "Status changed to Quote Sent", daysAgo: 6 }, { msg: "Status changed to Won", daysAgo: 3 }]),
+    ];
+  }
+
+  // Default: Auto Repair
   return [
-    {
-      id: crypto.randomUUID(),
-      name: "James Holloway",
-      phone: "555-0191",
-      service: "Brake pad replacement",
-      source: "Walk-in",
-      notes: "Dropped in yesterday asking about front and rear pads on a 2019 Honda Civic. Said he needs it done this week.",
-      followUpDate: addDaysToDate(today, -2),
-      status: "New" as const,
-      createdAt: daysAgoISO(3),
-      updatedAt: daysAgoISO(3),
-      activity: [entry("Lead created", 3)],
-      is_demo: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "Maria Santos",
-      phone: "555-0182",
-      service: "Deep house clean — 3 bed",
-      source: "Referral",
-      notes: "Referred by the Patel family. Needs a quote before end of week.",
-      followUpDate: today,
-      status: "New" as const,
-      createdAt: daysAgoISO(1),
-      updatedAt: daysAgoISO(1),
-      activity: [entry("Lead created", 1)],
-      is_demo: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "Kevin Park",
-      phone: "555-0174",
-      service: "10-lesson driving package",
-      source: "Online",
-      notes: "Enquired online. Spoke on the phone — very keen. Wants to start next week.",
-      followUpDate: addDaysToDate(today, 2),
-      status: "Contacted" as const,
-      createdAt: daysAgoISO(4),
-      updatedAt: daysAgoISO(2),
-      activity: [
-        entry("Lead created", 4),
-        entry("Status changed to Contacted", 2),
-      ],
-      is_demo: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "Aisha Okafor",
-      phone: "555-0165",
-      service: "Full vehicle inspection",
-      source: "Phone call",
-      notes: "Sent a quote for £120. Waiting to hear back — she said she'd decide by Thursday.",
-      followUpDate: addDaysToDate(today, 3),
-      status: "Quote Sent" as const,
-      createdAt: daysAgoISO(6),
-      updatedAt: daysAgoISO(1),
-      activity: [
-        entry("Lead created", 6),
-        entry("Status changed to Contacted", 4),
-        entry("Status changed to Quote Sent", 1),
-      ],
-      is_demo: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "David Kim",
-      phone: "555-0158",
-      service: "Oil change and tire rotation",
-      source: "Referral",
-      notes: "Booked in and paid. Regular customer — check in next month.",
-      followUpDate: addDaysToDate(today, 30),
-      status: "Won" as const,
-      createdAt: daysAgoISO(10),
-      updatedAt: daysAgoISO(3),
-      activity: [
-        entry("Lead created", 10),
-        entry("Status changed to Contacted", 8),
-        entry("Status changed to Quote Sent", 6),
-        entry("Status changed to Won", 3),
-      ],
-      is_demo: true,
-    },
+    lead("James Holloway", "555-0191", "Brake pad replacement", "Walk-in",
+      "Dropped in asking about front and rear pads on a 2019 Honda Civic. Needs it done this week.",
+      addDaysToDate(today, -2), "New", 3, 3, [{ msg: "Lead created", daysAgo: 3 }]),
+    lead("Maria Santos", "555-0182", "Full vehicle inspection", "Phone call",
+      "Called about a pre-purchase inspection on a used car. Wants it done before the weekend.",
+      today, "New", 1, 1, [{ msg: "Lead created", daysAgo: 1 }]),
+    lead("Kevin Park", "555-0174", "Tyre change — all 4", "Online",
+      "Enquired online. Spoke on the phone — wants winter tyres fitted. Confirmed next Thursday.",
+      addDaysToDate(today, 2), "Contacted", 5, 2,
+      [{ msg: "Lead created", daysAgo: 5 }, { msg: "Status changed to Contacted", daysAgo: 2 }]),
+    lead("Aisha Okafor", "555-0165", "Engine diagnostic", "Phone call",
+      "Check engine light on. Sent a quote for £60 diagnostic. Waiting to hear back by Thursday.",
+      addDaysToDate(today, 3), "Quote Sent", 6, 1,
+      [{ msg: "Lead created", daysAgo: 6 }, { msg: "Status changed to Contacted", daysAgo: 4 },
+       { msg: "Status changed to Quote Sent", daysAgo: 1 }]),
+    lead("David Kim", "555-0158", "Oil change and tire rotation", "Referral",
+      "Booked in and paid. Regular customer — check in next month.",
+      addDaysToDate(today, 30), "Won", 10, 3,
+      [{ msg: "Lead created", daysAgo: 10 }, { msg: "Status changed to Contacted", daysAgo: 8 },
+       { msg: "Status changed to Quote Sent", daysAgo: 6 }, { msg: "Status changed to Won", daysAgo: 3 }]),
   ];
 }
 
@@ -164,7 +252,7 @@ export function OnboardingFlow() {
   async function chooseSampleLeads() {
     if (saving) return;
     setSaving(true);
-    replaceAllLeads(makeSampleLeads());
+    replaceAllLeads(makeSampleLeads(businessType));
     await saveMetaAndGo("/dashboard?walkthrough=true");
   }
 
@@ -181,12 +269,6 @@ export function OnboardingFlow() {
       status: "New",
     });
     await saveMetaAndGo("/dashboard?walkthrough=true");
-  }
-
-  async function skip() {
-    if (saving) return;
-    setSaving(true);
-    await saveMetaAndGo("/dashboard");
   }
 
   if (step === 1) {
@@ -211,7 +293,7 @@ export function OnboardingFlow() {
 
           <ProgressDots step={1} total={3} />
 
-          <div className="w-full space-y-3">
+          <div className="w-full">
             <button
               type="button"
               onClick={() => setStep(2)}
@@ -219,14 +301,6 @@ export function OnboardingFlow() {
             >
               Get Started
               <ChevronRight className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={skip}
-              disabled={saving}
-              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer py-2 touch-manipulation"
-            >
-              Skip setup
             </button>
           </div>
         </div>
@@ -237,7 +311,7 @@ export function OnboardingFlow() {
   if (step === 2) {
     return (
       <div className="min-h-screen bg-white flex flex-col px-5 py-6 safe-top">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center mb-5">
           <button
             type="button"
             onClick={() => setStep(1)}
@@ -245,15 +319,6 @@ export function OnboardingFlow() {
           >
             <ChevronLeft className="h-4 w-4" />
             Back
-          </button>
-          <button
-            type="button"
-            onClick={skip}
-            disabled={saving}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer touch-manipulation"
-          >
-            <X className="h-3.5 w-3.5" />
-            Skip
           </button>
         </div>
 
@@ -311,6 +376,9 @@ export function OnboardingFlow() {
               Continue
               <ChevronRight className="h-5 w-5" />
             </button>
+            {!businessType && (
+              <p className="text-center text-xs text-muted-foreground mt-2">Select a business type to continue</p>
+            )}
           </div>
         </div>
       </div>
@@ -319,9 +387,10 @@ export function OnboardingFlow() {
 
   if (step === 3 && addingOwnLead) {
     const canSubmit = draft.name.trim().length > 0;
+    const servicePlaceholder = businessType ? SERVICE_PLACEHOLDER[businessType] : "e.g. Customer follow-up";
     return (
       <div className="min-h-screen bg-white flex flex-col px-5 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center mb-6">
           <button
             type="button"
             onClick={() => setAddingOwnLead(false)}
@@ -329,15 +398,6 @@ export function OnboardingFlow() {
           >
             <ChevronLeft className="h-4 w-4" />
             Back
-          </button>
-          <button
-            type="button"
-            onClick={skip}
-            disabled={saving}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer touch-manipulation"
-          >
-            <X className="h-3.5 w-3.5" />
-            Skip
           </button>
         </div>
 
@@ -382,7 +442,7 @@ export function OnboardingFlow() {
                 id="ob-service"
                 type="text"
                 autoComplete="off"
-                placeholder="e.g. Brake pad replacement"
+                placeholder={servicePlaceholder}
                 value={draft.service}
                 onChange={e => setDraft(d => ({ ...d, service: e.target.value }))}
                 className="w-full rounded-lg border border-input bg-background px-3 py-3 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition"
@@ -419,7 +479,7 @@ export function OnboardingFlow() {
   if (step === 3) {
     return (
       <div className="min-h-screen bg-white flex flex-col px-5 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center mb-6">
           <button
             type="button"
             onClick={() => setStep(2)}
@@ -427,15 +487,6 @@ export function OnboardingFlow() {
           >
             <ChevronLeft className="h-4 w-4" />
             Back
-          </button>
-          <button
-            type="button"
-            onClick={skip}
-            disabled={saving}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer touch-manipulation"
-          >
-            <X className="h-3.5 w-3.5" />
-            Skip
           </button>
         </div>
 

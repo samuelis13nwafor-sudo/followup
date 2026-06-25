@@ -294,7 +294,7 @@ import { Link, useLocation } from "wouter";
 
         {/* Mobile layout */}
         <div className="flex flex-1 flex-col">
-          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+          <header className="flex h-14 items-center gap-2 border-b bg-background px-3 md:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <Button data-walkthrough="mobile-menu-btn" variant="ghost" size="icon" className="shrink-0 md:hidden">
@@ -318,13 +318,15 @@ import { Link, useLocation } from "wouter";
                 </div>
               </SheetContent>
             </Sheet>
-            <div className="font-semibold text-lg flex items-center gap-2 flex-1">
-              FollowUp
+            <div className="font-semibold text-base flex items-center gap-1.5 flex-1 min-w-0">
+              <span className="truncate">FollowUp</span>
               {devModeEnabled && (
-                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-300">DEV</span>
+                <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-300">DEV</span>
               )}
             </div>
-            <NotificationBell />
+            <div className="shrink-0">
+              <NotificationBell />
+            </div>
           </header>
 
           {/* Demo Mode banner */}

@@ -3,8 +3,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation } from "wouter";
 import { useLeads } from "../hooks/useLeads";
+import { useAuth } from "@/contexts/AuthContext";
 import { getTodayDateString } from "../lib/leadUtils";
 import { format } from "date-fns";
+
+const SERVICE_PLACEHOLDER: Record<string, string> = {
+  "Auto Repair":      "e.g. Brake pad replacement",
+  "Cleaning Service": "e.g. Deep house cleaning",
+  "Barber / Salon":   "e.g. Haircut & beard trim",
+  "Driving School":   "e.g. Beginner driving lesson",
+  "Home Services":    "e.g. Drywall repair",
+  "Other":            "e.g. Customer follow-up",
+};
 
 import {
   Form,
@@ -36,6 +46,11 @@ type FormValues = z.infer<typeof formSchema>;
 export default function AddLead() {
   const [, setLocation] = useLocation();
   const { addLead } = useLeads();
+  const { user } = useAuth();
+  const businessType: string | undefined = user?.user_metadata?.business_type;
+  const servicePlaceholder = businessType && SERVICE_PLACEHOLDER[businessType]
+    ? SERVICE_PLACEHOLDER[businessType]
+    : "e.g. Brake pad replacement";
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -128,7 +143,7 @@ export default function AddLead() {
                     <FormItem>
                       <FormLabel>Service Requested *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Brake pad replacement" {...field} />
+                        <Input placeholder={servicePlaceholder} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
