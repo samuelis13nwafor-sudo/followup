@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
   import {
     LayoutDashboard, Users, PlusCircle, Menu, FlaskConical, Zap, Trash2,
-    RotateCcw, UserX, TestTubeDiagonal, LogOut, User, BellRing,
+    RotateCcw, UserX, TestTubeDiagonal, LogOut, User, BellRing, Settings,
   } from "lucide-react";
   import { NotificationBell } from "@/components/NotificationBell";
   import { Button } from "@/components/ui/button";
@@ -376,6 +376,7 @@ import { Link, useLocation } from "wouter";
     const navigation = [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Leads", href: "/leads", icon: Users },
+      { name: "Settings", href: "/settings", icon: Settings },
     ];
 
     const NavLinks = ({ onNav }: { onNav?: () => void }) => (

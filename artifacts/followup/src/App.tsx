@@ -13,6 +13,7 @@ import LeadDetail from "@/pages/LeadDetail";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
+import Settings from "@/pages/Settings";
 import { DevDateProvider } from "@/contexts/DevDateContext";
 import { LeadsProvider } from "@/contexts/LeadsContext";
 import { ViewProvider } from "@/contexts/ViewContext";
@@ -70,6 +71,9 @@ function Router() {
       </Route>
       <Route path="/leads/:id">
         {() => <ProtectedRoute><LeadDetail /></ProtectedRoute>}
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute><Settings /></ProtectedRoute>
       </Route>
       <Route component={NotFound} />
     </Switch>
